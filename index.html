@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0369a1" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <title>Cambridge Starters & Movers (27-Inch Master): Grammar + 4-Skills Exam</title>
   <style>
     :root {
@@ -48,16 +52,7 @@
       gap: 8px;
       box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
       z-index: 30;
-      overflow: hidden;
-    }
-
-    .site-note {
-      margin-top: auto;
-      padding: 10px 6px 2px;
-      font-size: 11px;
-      line-height: 1.5;
-      color: rgba(255, 255, 255, 0.55);
-      text-align: center;
+      overflow-y: auto;
     }
 
     .stage-switcher {
@@ -206,23 +201,6 @@
       flex-direction: column;
       gap: 5px;
       flex: 1;
-      min-height: 0;
-      overflow-y: auto;
-      padding-right: 4px;
-    }
-    .module-nav::-webkit-scrollbar {
-      width: 6px;
-    }
-    .module-nav::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 4px;
-    }
-    .module-nav::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 4px;
-    }
-    .module-nav::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.35);
     }
     .mod-btn {
       text-align: left;
@@ -541,7 +519,6 @@
     .c-pill.s { background: var(--subj-blue); }
     .c-pill.v { background: var(--verb-red); }
     .c-pill.o { background: var(--obj-green); }
-    .c-pill.c { background: #7c3aed; }
 
     .grade1-option-row {
       display: flex;
@@ -644,7 +621,6 @@
     .train-car.car-0 { background: var(--subj-blue); }
     .train-car.car-1 { background: var(--verb-red); }
     .train-car.car-2 { background: var(--obj-green); }
-    .train-car.car-3 { background: #7c3aed; }
 
     /* PHA 4 & THI VIẾT: GÕ BÀN PHÍM ĐÁNH VẦN CỠ ĐẠI */
     .typing-arena {
@@ -825,36 +801,6 @@
       25% { transform: translateX(-8px); }
       75% { transform: translateX(8px); }
     }
-    /* === MÀN HÌNH NHỎ (ĐIỆN THOẠI, MÁY TÍNH BẢNG ĐỨNG): xếp dọc thay vì chia cột === */
-    @media (max-width: 900px) {
-      body { flex-direction: column; height: auto; min-height: 100vh; overflow-y: auto; }
-      .left-sidebar { width: 100%; min-width: 0; max-height: none; overflow-y: visible; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); }
-      .main-stage { height: auto; overflow: visible; }
-      .main-stage { min-width: 0; width: 100%; }
-      .top-header { padding: 8px 12px; }
-      .lesson-row { flex-wrap: wrap; }
-      .lesson-pills { flex-wrap: wrap; }
-      .phase-tabs { grid-template-columns: repeat(3, 1fr); }
-      .workspace { overflow: visible; padding: 10px 12px 16px; }
-      .chunk-grid, .ergo-split { grid-template-columns: minmax(0, 1fr); }
-      .left-deck { min-width: 0; padding: 12px; }
-      .pick-chunk-btn { font-size: 18px; padding: 12px 14px; overflow-wrap: anywhere; }
-      .chunk-card { min-width: 0; padding: 12px; flex-direction: column; align-items: stretch; gap: 10px; }
-      .scene-big { min-width: 0; width: 100%; height: 84px; font-size: 52px; }
-      .module-nav { max-height: 240px; overflow-y: auto; }
-      .card-right-info { min-width: 0; }
-      .c-pill { max-width: 100%; overflow-wrap: anywhere; }
-      .onscreen-keyboard { padding: 8px; }
-      .kb-row { gap: 4px; }
-      .kb-key { flex: 1 1 0; min-width: 0; width: auto; height: 42px; font-size: 17px; padding: 0; border-width: 2px; }
-      .hero-audio-btn { max-width: 100%; white-space: normal; text-align: center; }
-      .right-stage { flex-direction: column !important; align-items: stretch !important; gap: 10px; padding: 12px !important; min-width: 0; }
-      .right-stage h2 { font-size: 26px !important; overflow-wrap: anywhere; }
-      .right-stage > div { flex-wrap: wrap; min-width: 0; }
-      .exam-score-grid { grid-template-columns: repeat(2, 1fr); }
-      div:has(> .hero-audio-btn) { flex-wrap: wrap; }
-      .hero-audio-btn { width: auto !important; height: auto !important; min-width: 0 !important; border-radius: 99px !important; padding: 10px 18px !important; font-size: 15px !important; }
-    }
   </style>
 </head>
 <body>
@@ -906,9 +852,6 @@
     </div>
 
     <nav class="module-nav" id="moduleNav"></nav>
-    <footer class="site-note">
-      Danh sách từ dựa trên NGSL (Browne, Culligan &amp; Phillips, CC BY-SA 4.0). Nội dung theo khung các cấp Cambridge, không liên kết hoặc được Cambridge xác nhận.
-    </footer>
   </aside>
 
   <!-- KHU VỰC HỌC TẬP CHÍNH TRÊN MÀN HÌNH 27 INCH -->
@@ -946,429 +889,354 @@
     <section class="workspace" id="workspace"></section>
   </main>
 
-
-  <!-- DỮ LIỆU: mỗi giai đoạn một file, gán window.CURRICULUM_STAGES[N]. Thiếu file thì bỏ qua (không lỗi). Thêm giai đoạn: thả stageN.js (N ≤ 9) vào data/. -->
-  <script src="data/stage1.js"></script>
-  <script src="data/stage2.js"></script>
-  <script src="data/stage3.js"></script>
-  <script src="data/stage4.js"></script>
-  <script src="data/stage5.js"></script>
-  <script src="data/stage6.js"></script>
-  <script src="data/stage7.js"></script>
-  <script src="data/stage8.js"></script>
-  <script src="data/stage9.js"></script>
+  <!-- Tiện ích + danh sách bài (nhỏ) nạp trước; dữ liệu bài nặng chỉ nạp CẤP ĐANG HỌC (vị trí cuối lấy từ kho tiến độ), cấp khác chèn <script> khi chuyển (app_kit.js → AppKit.ensureStage). -->
+  <script src="data/config.js"></script>
+  <script src="data/meta.js"></script>
+  <script src="data/srs_core.js"></script>
+  <script src="data/session_engine.js"></script>
+  <script src="data/progress_store.js"></script>
+  <script>
+    (function () {
+      var ids = ((window.COURSE_META || {}).stages || []).map(function (s) { return s.id; }), n = ids[0];
+      try { var p = window.CourseStore && window.CourseStore.position(); if (p && ids.indexOf(p.stage) >= 0) n = p.stage; } catch (e) {}
+      window.__INIT_STAGE = n;
+      document.write('<script src="data/stage' + n + '.js"><\/script>');
+    })();
+  </script>
 
   <script>
-  /* =========================================================================
-     1. DỮ LIỆU CHƯƠNG TRÌNH & CẤU HÌNH THÍCH ỨNG ĐỘ TUỔI (ADAPTIVE PEDAGOGY)
-     ========================================================================= */
-  const ALL_CURRICULUM = window.CURRICULUM_STAGES || {};
-  const STAGE_IDS = Object.keys(ALL_CURRICULUM).map(Number).sort((a, b) => a - b);
+    /* =========================================================================
+       1. DỮ LIỆU CHƯƠNG TRÌNH: nạp từ data/stage1.js, stage2.js, ... (xem thẻ <script src> phía trên)
+       Mỗi bài học tích hợp:
+       - grammar: Quy luật Ngữ pháp Nam châm trực quan (formulas + tip)
+       - chunks: 4 câu cốt lõi chia 3 toa màu sắc + từ khóa gõ bàn phím
+       - qaList: Câu hỏi phản xạ ngữ cảnh
+       - parentGame: Trò chơi thực tế 10 phút cùng bố mẹ
+       ========================================================================= */
+    const ALL_CURRICULUM = window.CURRICULUM_STAGES || {};
+    const STAGE_IDS = ((window.COURSE_META || {}).stages || []).map(s => s.id).filter(n => !!n).sort((a, b) => a - b);   // từ meta.js; dữ liệu từng giai đoạn nạp theo nhu cầu
+    const STAGE_LABEL = {}; (((window.COURSE_META || {}).stages) || []).forEach(s => { STAGE_LABEL[s.id] = s.label; });
 
-  let curStage = STAGE_IDS[0] || 1;
-  let curMod = ALL_CURRICULUM[curStage].modules[0].code;
-  let curLesIdx = 0;
-  let curPhase = 'p1'; // 'p1' | 'p2' | 'p3' | 'p4' | 'p5' | 'p6' | 'leitner'
 
-  let speechRate = 0.72;
-  let zenMode = false;
-  let stars = Number(localStorage.getItem('s1_g1_stars') || 0);
-  let leitnerDB = JSON.parse(localStorage.getItem('s1_g1_leitner') || '[]');
+    /* =========================================================================
+       2. HỆ THỐNG ÂM THANH, ĐỒNG HỒ & LƯU TRỮ (BẢO TOÀN 12 SAO CỦA BÉ)
+       ========================================================================= */
+    let curStage = window.__INIT_STAGE || STAGE_IDS[0]; // giai đoạn đầu tiên có dữ liệu (1 = Starters, 2 = Movers, ...)
+    let curMod = ALL_CURRICULUM[curStage].modules[0].code;
+    let curLesIdx = 0;
+    let curPhase = 'p1'; // 'p1' | 'p2' | 'p3' | 'p4' | 'p5' | 'p6' | 'leitner'
 
-  let sessionSec = 1800;
-  let timerRunning = false;
-  let sessionInt = null;
+    let speechRate = 0.72;
+    let zenMode = false;
+    const CS = window.CourseStore;   // kho tiến độ duy nhất (data/progress_store.js); trang không ghi thẳng bộ nhớ trình duyệt
+    let stars = CS.getStars();
+    let leitnerDB = CS.getLeitner().slice();
 
-  let qStart = 0;
-  let reflexInt = null;
+    let sessionSec = 1800;
+    let timerRunning = false;
+    let sessionInt = null;
 
-  // Kiểm tra cấp độ: GĐ 1-3 (Thiếu nhi: Starters -> Flyers) vs GĐ 4-6 (Thiếu niên/Học thuật: KET -> B2)
-  function isUpperStage() {
-    return curStage >= 4;
-  }
+    let qStart = 0;
+    let reflexInt = null;
 
-  function getPronoun() {
-    return isUpperStage() ? 'Bạn' : 'Con';
-  }
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-  // Chuẩn hóa ký tự đặc biệt khi truyền vào thuộc tính onclick HTML
-  function escAttr(str) {
-    return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-  }
+    function playSFX(type) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
 
-  // Tự động tách câu phức ở GĐ 4-6 thành 4 toa tàu nếu toa thứ 3 quá dài và chứa mệnh đề phụ
-  function getAdaptiveParts(chunk) {
-    const baseParts = chunk.parts || [];
-    if (!isUpperStage() || baseParts.length !== 3) return baseParts;
-    const lastPart = baseParts[2];
-    const clauseRegex = /\b(when|while|before|after|because|since|for|until|although|though|if|unless|so that|that|, so)\b/i;
-    const match = lastPart.t.match(clauseRegex);
-    if (match && match.index > 3) {
-      const firstHalf = lastPart.t.slice(0, match.index).trim().replace(/,$/, '');
-      const secondHalf = lastPart.t.slice(match.index).trim();
-      if (firstHalf && secondHalf) {
-        return [
-          baseParts[0],
-          baseParts[1],
-          { t: firstHalf, ico: lastPart.ico, c: 'o' },
-          { t: secondHalf, ico: '🔗', c: 'c' }
-        ];
+      if (type === 'ok') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.08);
+        osc.frequency.setValueAtTime(1046.5, now + 0.16);
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+        osc.start(now);
+        osc.stop(now + 0.36);
+      } else if (type === 'err') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.linearRampToValueAtTime(135, now + 0.25);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        osc.start(now);
+        osc.stop(now + 0.28);
+      } else if (type === 'key') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(620, now);
+        osc.frequency.exponentialRampToValueAtTime(920, now + 0.06);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+        osc.start(now);
+        osc.stop(now + 0.07);
+      } else {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.exponentialRampToValueAtTime(760, now + 0.06);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+        osc.start(now);
+        osc.stop(now + 0.07);
       }
     }
-    return baseParts;
-  }
 
-  // Sinh phương án nhiễu ĐỘNG (Dynamic Distractors) cùng trình độ từ dữ liệu bài học/Module
-  function getDynamicChunkDistractors(targetChunk, count = 2) {
-    const modLessons = getModuleLessons();
-    const pool = [];
-    modLessons.forEach(l => {
-      l.chunks.forEach(ch => {
-        if (ch.full !== targetChunk.full) {
-          const pts = getAdaptiveParts(ch);
-          const lastPt = pts[pts.length - 1];
-          if (lastPt && !pool.some(p => p.t === lastPt.t)) {
-            pool.push({ t: lastPt.t, ico: lastPt.ico, c: lastPt.c });
-          }
-        }
-      });
-    });
-    return pool.sort(() => Math.random() - 0.5).slice(0, count);
-  }
-
-  function getDynamicSentenceOptions(targetChunk, totalOpts = 3) {
-    const modLessons = getModuleLessons();
-    const pool = [];
-    modLessons.forEach(l => {
-      l.chunks.forEach(ch => {
-        if (ch.full !== targetChunk.full && !pool.some(p => p.txt === ch.full)) {
-          pool.push({ txt: ch.full, ico: ch.scene });
-        }
-      });
-    });
-    const distractors = pool.sort(() => Math.random() - 0.5).slice(0, totalOpts - 1);
-    return [...distractors, { txt: targetChunk.full, ico: targetChunk.scene }]
-      .sort(() => Math.random() - 0.5);
-  }
-
-  /* =========================================================================
-     2. HỆ THỐNG ÂM THANH, ĐỒNG HỒ & LƯU TRỮ LEITNER
-     ========================================================================= */
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-  function playSFX(type) {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    if (type === 'ok') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(523.25, now);
-      osc.frequency.setValueAtTime(659.25, now + 0.08);
-      osc.frequency.setValueAtTime(1046.5, now + 0.16);
-      gain.gain.setValueAtTime(0.22, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
-      osc.start(now);
-      osc.stop(now + 0.36);
-    } else if (type === 'err') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(200, now);
-      osc.frequency.linearRampToValueAtTime(135, now + 0.25);
-      gain.gain.setValueAtTime(0.16, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-      osc.start(now);
-      osc.stop(now + 0.28);
-    } else if (type === 'key') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(620, now);
-      osc.frequency.exponentialRampToValueAtTime(920, now + 0.06);
-      gain.gain.setValueAtTime(0.18, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
-      osc.start(now);
-      osc.stop(now + 0.07);
-    } else {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(520, now);
-      osc.frequency.exponentialRampToValueAtTime(760, now + 0.06);
-      gain.gain.setValueAtTime(0.12, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
-      osc.start(now);
-      osc.stop(now + 0.07);
+    function speakText(text, customRate = null, _noSprite = false) {
+      if (!_noSprite && text && window.AppKit && window.AppKit.speakSprite && window.AppKit.speakSprite(text, customRate || speechRate, null, () => speakText(text, customRate, true))) return;   // có file âm thanh sprite của bài thì phát từ file, không thì dùng giọng trình duyệt
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      const voices = window.speechSynthesis.getVoices();
+      const enVoice = voices.find(v => v.lang === 'en-US' && (v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Natural')))
+                   || voices.find(v => v.lang.startsWith('en-US'))
+                   || voices.find(v => v.lang.startsWith('en'));
+      if (enVoice) u.voice = enVoice;
+      u.lang = 'en-US';
+      u.rate = customRate || speechRate;
+      u.pitch = 1.05;
+      window.speechSynthesis.speak(u);
     }
-  }
 
-  function speakText(text, customRate = null) {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    const enVoice = voices.find(v => v.lang === 'en-US' && (v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Natural')))
-      || voices.find(v => v.lang.startsWith('en-US'))
-      || voices.find(v => v.lang.startsWith('en'));
-    if (enVoice) u.voice = enVoice;
-    u.lang = 'en-US';
-    u.rate = customRate || speechRate;
-    u.pitch = isUpperStage() ? 1.0 : 1.05;
-    window.speechSynthesis.speak(u);
-  }
+    function setSpeed(r) {
+      speechRate = r;
+      document.getElementById('spdSlow').classList.toggle('active', r === 0.72);
+      document.getElementById('spdNorm').classList.toggle('active', r === 0.92);
+      playSFX('tap');
+    }
 
-  function setSpeed(r) {
-    speechRate = r;
-    document.getElementById('spdSlow').classList.toggle('active', r === 0.72);
-    document.getElementById('spdNorm').classList.toggle('active', r === 0.92);
-    playSFX('tap');
-  }
+    function toggleZenMode() {
+      zenMode = !zenMode;
+      const btn = document.getElementById('zenBtn');
+      btn.textContent = zenMode
+        ? '🧘 Đang bật: Thư giãn Lớp 1 (Không giới hạn giờ)'
+        : '⏱️ Đang bật: Đếm nhịp 8 giây (Bấm để tắt giờ)';
+      playSFX('tap');
+      renderWorkspace();
+    }
 
-  function toggleZenMode() {
-    zenMode = !zenMode;
-    const btn = document.getElementById('zenBtn');
-    const limitSec = isUpperStage() ? 12 : 8;
-    btn.textContent = zenMode
-      ? '🧘 Đang bật: Thư giãn (Không giới hạn giờ)'
-      : `⏱️ Đang bật: Đếm nhịp ${limitSec} giây (Bấm để tắt giờ)`;
-    playSFX('tap');
-    const fill = document.getElementById('reflexFill');
-    if (fill) {
+    function toggleTimer() {
+      timerRunning = !timerRunning;
+      document.getElementById('timerToggleBtn').textContent = timerRunning ? '⏸ Dừng' : '▶ Tiếp tục';
+      if (timerRunning) {
+        sessionInt = setInterval(() => {
+          if (sessionSec > 0) {
+            sessionSec--;
+            const m = String(Math.floor(sessionSec / 60)).padStart(2, '0');
+            const s = String(sessionSec % 60).padStart(2, '0');
+            document.getElementById('sessionClock').textContent = `${m}:${s}`;
+          } else {
+            clearInterval(sessionInt);
+            playSFX('ok');
+          }
+        }, 1000);
+      } else {
+        clearInterval(sessionInt);
+      }
+    }
+
+    function startReflex8s() {
+      clearInterval(reflexInt);
+      qStart = performance.now();
+      const fill = document.getElementById('reflexFill');
+      if (!fill) return;
       if (zenMode) {
-        clearInterval(reflexInt);
         fill.style.width = '100%';
         fill.style.background = '#38bdf8';
-      } else {
-        startReflex8s();
+        return;
       }
-    }
-  }
-
-  function toggleTimer() {
-    timerRunning = !timerRunning;
-    document.getElementById('timerToggleBtn').textContent = timerRunning ? '⏸ Dừng' : '▶ Tiếp tục';
-    if (timerRunning) {
-      sessionInt = setInterval(() => {
-        if (sessionSec > 0) {
-          sessionSec--;
-          const m = String(Math.floor(sessionSec / 60)).padStart(2, '0');
-          const s = String(sessionSec % 60).padStart(2, '0');
-          document.getElementById('sessionClock').textContent = `${m}:${s}`;
-        } else {
-          clearInterval(sessionInt);
-          playSFX('ok');
-        }
-      }, 1000);
-    } else {
-      clearInterval(sessionInt);
-    }
-  }
-
-  function startReflex8s() {
-    clearInterval(reflexInt);
-    qStart = performance.now();
-    const fill = document.getElementById('reflexFill');
-    if (!fill) return;
-    if (zenMode) {
       fill.style.width = '100%';
-      fill.style.background = '#38bdf8';
-      return;
+      reflexInt = setInterval(() => {
+        const el = (performance.now() - qStart) / 1000;
+        const pct = Math.max(0, 100 - (el / 8.0) * 100);
+        const f = document.getElementById('reflexFill');
+        if (f) f.style.width = `${pct}%`;
+        if (el >= 8.0) clearInterval(reflexInt);
+      }, 100);
     }
-    const maxSec = isUpperStage() ? 12.0 : 8.0; // Câu dài B1/B2 cho 12 giây, câu ngắn 8 giây
-    fill.style.width = '100%';
-    fill.style.background = 'linear-gradient(90deg, #22c55e, #f59e0b)';
-    reflexInt = setInterval(() => {
-      const el = (performance.now() - qStart) / 1000;
-      const pct = Math.max(0, 100 - (el / maxSec) * 100);
-      const f = document.getElementById('reflexFill');
-      if (f) f.style.width = `${pct}%`;
-      if (el >= maxSec) clearInterval(reflexInt);
-    }, 100);
-  }
 
-  function recordResult(isCorrect, meta) {
-    clearInterval(reflexInt);
-    const sec = (performance.now() - qStart) / 1000;
-    const maxSec = isUpperStage() ? 12.0 : 8.0;
-    const isFast = zenMode ? true : (sec <= maxSec);
-    let rec = leitnerDB.find(x => x.id === meta.id);
+    function recordResult(isCorrect, meta) {
+      clearInterval(reflexInt);
+      const sec = (performance.now() - qStart) / 1000;
+      const isFast = zenMode ? true : (sec <= 8.0);
+      let rec = leitnerDB.find(x => x.id === meta.id);
 
-    if (isCorrect) {
-      playSFX('ok');
-      stars += isFast ? 3 : 2;
-      if (rec) {
-        if (rec.box < 3) rec.box += 1;
-        rec.options = meta.options || rec.options;
-      } else if (!isFast) {
-        leitnerDB.push({ ...meta, box: 2 });
-      }
-    } else {
-      playSFX('err');
-      if (rec) {
-        rec.box = 1;
-        rec.options = meta.options || rec.options;
+      if (isCorrect) {
+        playSFX('ok');
+        stars += isFast ? 3 : 2;
+        if (rec) {
+          if (rec.box < 3) rec.box += 1;
+        } else if (!isFast) {
+          leitnerDB.push({ ...meta, box: 2 });
+        }
       } else {
-        leitnerDB.push({ ...meta, box: 1 });
+        playSFX('err');
+        if (rec) rec.box = 1;
+        else leitnerDB.push({ ...meta, box: 1 });
       }
+
+      CS.setStars(stars);
+      CS.setLeitner(leitnerDB);
+      syncSidebarUI();
+      return { isFast, sec: sec.toFixed(1) };
     }
 
-    localStorage.setItem('s1_g1_stars', stars);
-    localStorage.setItem('s1_g1_leitner', JSON.stringify(leitnerDB));
-    syncSidebarUI();
-    return { isFast, sec: sec.toFixed(1) };
-  }
-
-  function syncSidebarUI() {
-    document.getElementById('uiStars').textContent = `⭐ ${stars}`;
-    const b1 = leitnerDB.filter(x => x.box === 1).length;
-    const b2 = leitnerDB.filter(x => x.box === 2).length;
-    const b3 = leitnerDB.filter(x => x.box === 3).length;
-    document.getElementById('cntB1').textContent = b1;
-    document.getElementById('cntB2').textContent = b2;
-    document.getElementById('cntB3').textContent = b3;
-    document.getElementById('cntReview').textContent = b1 + b2;
-  }
-
-  /* =========================================================================
-     3. ĐIỀU HƯỚNG GIAI ĐOẠN, MODULE, BÀI HỌC & 6 PHA
-     ========================================================================= */
-  function renderStageSwitcher() {
-    document.getElementById('stageSwitcher').innerHTML = STAGE_IDS.map(n => `
-      <button class="stg-btn ${n === curStage ? 'active' : ''}" id="btnStg${n}" onclick="switchStage(${n})">${ALL_CURRICULUM[n].label || ('GĐ ' + n)}</button>
-    `).join('');
-  }
-
-  function switchStage(stg) {
-    curStage = stg;
-    curMod = ALL_CURRICULUM[stg].modules[0].code;
-    curLesIdx = 0;
-    curPhase = 'p1';
-    typedCount = 0;
-    p2CachedPool = null;
-    renderStageSwitcher();
-    playSFX('tap');
-    updateHeader();
-    renderWorkspace();
-  }
-
-  function selectModule(m) {
-    curMod = m;
-    curLesIdx = 0;
-    curPhase = 'p1';
-    typedCount = 0;
-    p2CachedPool = null;
-    playSFX('tap');
-    updateHeader();
-    renderWorkspace();
-  }
-
-  function selectLesson(idx) {
-    curLesIdx = idx;
-    curPhase = 'p1';
-    typedCount = 0;
-    p2CachedPool = null;
-    playSFX('tap');
-    updateHeader();
-    renderWorkspace();
-  }
-
-  function selectPhase(p) {
-    curPhase = p;
-    typedCount = 0;
-    p2CachedPool = null;
-    if (p === 'p6') buildExamQuestions(examScope);
-    playSFX('tap');
-    updateHeader();
-    renderWorkspace();
-  }
-
-  function getLesson() {
-    return ALL_CURRICULUM[curStage].data[curMod].lessons[curLesIdx];
-  }
-
-  function getModuleLessons() {
-    return ALL_CURRICULUM[curStage].data[curMod].lessons;
-  }
-
-  function updateHeader() {
-    const modList = ALL_CURRICULUM[curStage].modules;
-    const navEl = document.getElementById('moduleNav');
-    navEl.innerHTML = modList.map(m => `
-      <button class="mod-btn ${m.code === curMod && curPhase !== 'leitner' ? 'active' : ''}"
-              onclick="selectModule('${m.code}')">
-        <small>Module ${m.code} • 3 Bài</small>
-        <strong>${m.title}</strong>
-      </button>
-    `).join('');
-
-    const lessons = getModuleLessons();
-    document.getElementById('lessonPills').innerHTML = lessons.map((l, idx) => `
-      <button class="lesson-pill ${idx === curLesIdx && curPhase !== 'leitner' ? 'active' : ''}"
-              onclick="selectLesson(${idx})">
-        🌟 ${l.name}
-      </button>
-    `).join('');
-
-    // Thích ứng tiêu đề Tab theo độ tuổi (GĐ 1-3 vs GĐ 4-6)
-    document.getElementById('tabP2').innerHTML = isUpperStage() ? '🧩 2. Cấu Trúc Câu' : '🚂 2. Ghép Tàu 3 Toa';
-    document.getElementById('tabP5').innerHTML = isUpperStage() ? '🎲 5. Thực Hành Đời Thực' : '🎲 5. Chơi Cùng Bố Mẹ';
-
-    ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].forEach(p => {
-      document.getElementById('tab' + p.toUpperCase()).classList.toggle('active', curPhase === p);
-    });
-  }
-
-  function renderWorkspace() {
-    clearInterval(reflexInt);
-    const ws = document.getElementById('workspace');
-    ws.innerHTML = '';
-
-    if (curPhase === 'leitner') {
-      renderLeitnerStage(ws);
-      return;
+    function syncSidebarUI() {
+      document.getElementById('uiStars').textContent = `⭐ ${stars}`;
+      const b1 = leitnerDB.filter(x => x.box === 1).length;
+      const b2 = leitnerDB.filter(x => x.box === 2).length;
+      const b3 = leitnerDB.filter(x => x.box === 3).length;
+      document.getElementById('cntB1').textContent = b1;
+      document.getElementById('cntB2').textContent = b2;
+      document.getElementById('cntB3').textContent = b3;
+      document.getElementById('cntReview').textContent = b1 + b2;
     }
 
-    const les = getLesson();
-    if (curPhase === 'p1') renderP1_VisualAndGrammar(ws, les);
-    else if (curPhase === 'p2') renderP2_TrainBuilder(ws, les);
-    else if (curPhase === 'p3') renderP3_VisualQA(ws, les);
-    else if (curPhase === 'p4') renderP4_KeyboardTyping(ws, les);
-    else if (curPhase === 'p5') renderP5_ParentMission(ws, les);
-    else if (curPhase === 'p6') renderP6_ComprehensiveExam(ws, les);
-  }
+    /* =========================================================================
+       3. ĐIỀU HƯỚNG GIAI ĐOẠN, MODULE, BÀI HỌC & 6 PHA
+       ========================================================================= */
+    function renderStageSwitcher() {
+      document.getElementById('stageSwitcher').innerHTML = STAGE_IDS.map(n => `
+        <button class="stg-btn ${n === curStage ? 'active' : ''}" id="btnStg${n}" onclick="switchStage(${n})">${STAGE_LABEL[n] || ('GĐ ' + n)}</button>
+      `).join('');
+    }
 
-  /* =========================================================================
-     4. PHA 1: NGHE TRANH + KHUNG QUY LUẬT NGỮ PHÁP NAM CHÂM TRỰC QUAN
-     ========================================================================= */
-  let activeCardIdx = 0;
-  function renderP1_VisualAndGrammar(ws, les) {
-    const focusItem = les.chunks[activeCardIdx % les.chunks.length];
-    const gm = les.grammar;
+    function switchStage(stg) {
+      if (!ALL_CURRICULUM[stg]) { if (window.AppKit) window.AppKit.ensureStage(stg, () => switchStage(stg)); return; }   // dữ liệu giai đoạn chưa nạp: nạp rồi chuyển
+      curStage = stg;
+      curMod = ALL_CURRICULUM[stg].modules[0].code;
+      curLesIdx = 0;
+      curPhase = 'p1';
+      typedCount = 0;
+      renderStageSwitcher();
+      playSFX('tap');
+      updateHeader();
+      renderWorkspace();
+      ankiMarkOpened();
+    }
 
-    ws.innerHTML = `
-      <div class="grammar-magnet-box">
-        <div class="gm-left">
-          <span class="gm-badge">🧲 QUY LUẬT NGỮ PHÁP</span>
-          <div class="gm-formulas">
-            ${gm.formulas.map(f => `
-              <span class="gm-formula-pill" onclick="speakText('${escAttr(f.replace(/[^a-zA-Z\s']/g, ' '))}')">
-                🔊 ${f}
-              </span>
-            `).join('')}
+    /* Anki lũy kế: ghi nhận bài đã mở (data/anki_engine.js nạp sau nên kiểm tra tồn tại) */
+    function ankiMarkOpened() {
+      try { const l = getLesson(); if (l && window.KIDS_ANKI) window.KIDS_ANKI.markOpened(l.id); } catch (e) {}
+    }
+
+    function selectModule(m) {
+      curMod = m;
+      curLesIdx = 0;
+      curPhase = 'p1';
+      typedCount = 0;
+      playSFX('tap');
+      updateHeader();
+      renderWorkspace();
+      ankiMarkOpened();
+    }
+
+    function selectLesson(idx) {
+      curLesIdx = idx;
+      curPhase = 'p1';
+      typedCount = 0;
+      playSFX('tap');
+      updateHeader();
+      renderWorkspace();
+      ankiMarkOpened();
+    }
+
+    function selectPhase(p) {
+      curPhase = p;
+      typedCount = 0;
+      if (p === 'p6') buildExamQuestions(examScope);
+      playSFX('tap');
+      updateHeader();
+      renderWorkspace();
+    }
+
+    function getLesson() {
+      return ALL_CURRICULUM[curStage].data[curMod].lessons[curLesIdx];
+    }
+
+    function getModuleLessons() {
+      return ALL_CURRICULUM[curStage].data[curMod].lessons;
+    }
+
+    function updateHeader() {
+      const modList = ALL_CURRICULUM[curStage].modules;
+      const navEl = document.getElementById('moduleNav');
+      navEl.innerHTML = modList.map(m => `
+        <button class="mod-btn ${m.code === curMod && curPhase !== 'leitner' ? 'active' : ''}"
+                onclick="selectModule('${m.code}')">
+          <small>Module ${m.code} • 3 Bài</small>
+          <strong>${m.title}</strong>
+        </button>
+      `).join('');
+
+      const lessons = getModuleLessons();
+      document.getElementById('lessonPills').innerHTML = lessons.map((l, idx) => `
+        <button class="lesson-pill ${idx === curLesIdx && curPhase !== 'leitner' ? 'active' : ''}"
+                onclick="selectLesson(${idx})">
+          🌟 ${l.name}
+        </button>
+      `).join('');
+
+      ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].forEach(p => {
+        document.getElementById('tab' + p.toUpperCase()).classList.toggle('active', curPhase === p);
+      });
+    }
+
+    function renderWorkspace() {
+      clearInterval(reflexInt);
+      const ws = document.getElementById('workspace');
+      ws.innerHTML = '';
+
+      if (curPhase === 'leitner') {
+        renderLeitnerStage(ws);
+        return;
+      }
+
+      const les = getLesson();
+      if (curPhase === 'p1') renderP1_VisualAndGrammar(ws, les);
+      else if (curPhase === 'p2') renderP2_TrainBuilder(ws, les);
+      else if (curPhase === 'p3') renderP3_VisualQA(ws, les);
+      else if (curPhase === 'p4') renderP4_KeyboardTyping(ws, les);
+      else if (curPhase === 'p5') renderP5_ParentMission(ws, les);
+      else if (curPhase === 'p6') renderP6_ComprehensiveExam(ws, les);
+    }
+
+    /* =========================================================================
+       4. PHA 1: NGHE TRANH + KHUNG QUY LUẬT NGỮ PHÁP NAM CHÂM TRỰC QUAN
+       ========================================================================= */
+    let activeCardIdx = 0;
+    function renderP1_VisualAndGrammar(ws, les) {
+      const focusItem = les.chunks[activeCardIdx % les.chunks.length];
+      const gm = les.grammar;
+
+      ws.innerHTML = `
+        <!-- KHUNG QUY LUẬT NGỮ PHÁP NAM CHÂM TRỰC QUAN -->
+        <div class="grammar-magnet-box">
+          <div class="gm-left">
+            <span class="gm-badge">🧲 QUY LUẬT NGỮ PHÁP</span>
+            <div class="gm-formulas">
+              ${gm.formulas.map(f => `
+                <span class="gm-formula-pill" onclick="speakText('${f.replace(/[^a-zA-Z\s]/g, ' ')}')">
+                  🔊 ${f}
+                </span>
+              `).join('')}
+            </div>
           </div>
+          <div class="gm-tip">💡 ${gm.tip}</div>
         </div>
-        <div class="gm-tip">💡 ${gm.tip}</div>
-      </div>
 
-      <div class="chunk-grid">
-        ${les.chunks.map((ch, idx) => {
-          const adaptiveParts = getAdaptiveParts(ch);
-          return `
+        <div class="chunk-grid">
+          ${les.chunks.map((ch, idx) => `
             <div class="chunk-card" style="border-color:${idx===activeCardIdx?'#2563eb':'#cbd5e1'};background:${idx===activeCardIdx?'#eff6ff':'#fff'};"
-                 onclick="focusP1Card(${idx}, '${escAttr(ch.full)}')">
+                 onclick="focusP1Card(${idx}, '${ch.full}')">
               <div class="scene-big">${ch.scene}</div>
               <div class="card-right-info">
                 <div class="blocks-row">
-                  ${adaptiveParts.map(p => `
-                    <span class="c-pill ${p.c}" onclick="event.stopPropagation(); speakText('${escAttr(p.t)}')">
+                  ${ch.parts.map(p => `
+                    <span class="c-pill ${p.c}" onclick="event.stopPropagation(); speakText('${p.t}')">
                       ${p.ico} ${p.t}
                     </span>
                   `).join('')}
@@ -1376,346 +1244,766 @@
                 <small style="color:#1d4ed8;font-weight:800;font-size:13.5px;">🔊 Bấm thẻ nghe cả câu • Bấm ô màu nghe từng cụm</small>
               </div>
             </div>
-          `;
-        }).join('')}
-      </div>
-
-      <div class="right-stage" style="min-height:115px;padding:14px 24px;flex-direction:row;justify-content:space-between;">
-        <div style="display:flex;align-items:center;gap:18px;">
-          <span style="font-size:56px;">${focusItem.scene}</span>
-          <h2 style="font-size:36px;margin:0;color:#1e3a8a;">"${focusItem.full}"</h2>
+          `).join('')}
         </div>
-        <div style="display:flex;gap:12px;">
-          <button class="hero-audio-btn" onclick="speakText('${escAttr(focusItem.full)}')">
-            🔊 Nghe Mẫu (Space)
-          </button>
-          <button class="hero-audio-btn" style="background:#16a34a;" onclick="selectPhase('p2')">
-            ⏭️ Sang Pha 2
-          </button>
+
+        <div class="right-stage" style="min-height:115px;padding:14px 24px;flex-direction:row;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:18px;">
+            <span style="font-size:56px;">${focusItem.scene}</span>
+            <h2 style="font-size:40px;margin:0;color:#1e3a8a;">"${focusItem.full}"</h2>
+          </div>
+          <div style="display:flex;gap:12px;">
+            <button class="hero-audio-btn" onclick="speakText('${focusItem.full}')">
+              🔊 Nghe Mẫu (Space)
+            </button>
+            <button class="hero-audio-btn" style="background:#16a34a;" onclick="selectPhase('p2')">
+              ⏭️ Sang Pha 2: Ghép Tàu
+            </button>
+          </div>
         </div>
-      </div>
-    `;
-  }
-
-  window.focusP1Card = function(idx, sentence) {
-    activeCardIdx = idx;
-    speakText(sentence);
-    renderWorkspace();
-  };
-
-  /* =========================================================================
-     5. PHA 2: GHÉP ĐOÀN TÀU / CẤU TRÚC CÂU (CÓ DISTRACTORS ĐỘNG & LƯU CACHE POOL)
-     ========================================================================= */
-  let p2Idx = 0;
-  let trainCars = [];
-  let p2CachedPool = null;
-  let p2CachedKey = '';
-
-  function renderP2_TrainBuilder(ws, les) {
-    const target = les.chunks[p2Idx % les.chunks.length];
-    const targetParts = getAdaptiveParts(target);
-    const cacheKey = `${les.id}_${p2Idx % les.chunks.length}`;
-
-    if (!p2CachedPool || p2CachedKey !== cacheKey) {
-      const distractors = getDynamicChunkDistractors(target, 1);
-      p2CachedPool = [...targetParts, ...distractors].sort((a, b) => a.t.localeCompare(b.t));
-      p2CachedKey = cacheKey;
+      `;
     }
 
-    const pool = p2CachedPool;
-    const pron = getPronoun();
-    const maxSec = isUpperStage() ? 12 : 8;
-
-    ws.innerHTML = `
-      <div class="banner-box">
-        <div class="banner-title-wrap">
-          <h2>${isUpperStage() ? '🧩 Pha 2: Lắp Ghép Cấu Trúc Câu & Mệnh Đề' : '🚂 Pha 2: Ghép Đoàn Tàu 3 Toa'}</h2>
-          <p>💡 Ngữ pháp: <b>${les.grammar.tip}</b></p>
-        </div>
-        <button class="hero-audio-btn" onclick="selectPhase('p3')">⏭️ Sang Pha 3: Hỏi Đáp</button>
-      </div>
-      <div class="reflex-bar"><div class="reflex-fill" id="reflexFill"></div></div>
-      <div class="ergo-split">
-        <div class="left-deck">
-          ${pool.map((b, idx) => `
-            <div class="grade1-option-row">
-              <button class="preview-sound-btn" onclick="speakText('${escAttr(b.t)}')">
-                🔊<small>Nghe</small>
-              </button>
-              <button class="pick-chunk-btn" id="p2Opt_${idx}" onclick="addTrainCar('${escAttr(b.t)}', '${escAttr(b.ico)}')">
-                <span><b style="color:#2563eb;">[${idx+1}]</b> ${b.ico} ${b.t}</span>
-                <span class="c-pill ${b.c}" style="font-size:15px;padding:6px 12px;">➕ Lắp</span>
-              </button>
-            </div>
-          `).join('')}
-          <button class="pick-chunk-btn" style="background:#fee2e2;color:#b91c1c;justify-content:center;font-size:20px;padding:12px;" onclick="clearTrain()">
-            🔄 Xóa Lắp Lại Từ Đầu (Phím Backspace)
-          </button>
-        </div>
-        <div class="right-stage">
-          <div style="font-size:110px;line-height:1.1;">${target.scene}</div>
-          <button class="hero-audio-btn" style="margin-top:10px;" onclick="speakText('${escAttr(target.full)}')">
-            🔊 Nghe Cả Câu Mẫu (Phím Space)
-          </button>
-          <div class="train-track">
-            <span style="font-size:50px;">🚂</span>
-            ${trainCars.length === 0
-              ? `<span style="color:#64748b;font-weight:800;font-size:24px;">Chọn ${targetParts.length} mảnh ghép bên trái theo đúng trật tự câu...</span>`
-              : trainCars.map((car, i) => `
-                  <span class="train-car car-${i}">${car.ico} ${car.t}</span>
-                `).join('')}
-          </div>
-          <div class="toast-box" id="p2Toast">
-            ${zenMode
-              ? `🧘 Chế độ thư giãn: ${pron} cứ nghe thử từng cụm rồi ghép nhé!`
-              : `⏱️ Ghép đủ ${targetParts.length} mảnh trong ${maxSec} giây nhé!`}
-          </div>
-        </div>
-      </div>
-    `;
-    if (trainCars.length === 0) startReflex8s();
-  }
-
-  window.addTrainCar = function(t, ico) {
-    const les = getLesson();
-    const target = les.chunks[p2Idx % les.chunks.length];
-    const targetParts = getAdaptiveParts(target);
-    if (trainCars.length >= targetParts.length) return;
-
-    trainCars.push({ t, ico });
-    speakText(t);
-
-    if (trainCars.length < targetParts.length) {
+    window.focusP1Card = function(idx, sentence) {
+      activeCardIdx = idx;
+      speakText(sentence);
       renderWorkspace();
-      return;
-    }
-
-    // Chuẩn hóa khoảng trắng và dấu phẩy khi nối các mảnh
-    const built = trainCars.map(x => x.t).join(' ').replace(/\s+,/g, ',');
-    const expected = targetParts.map(x => x.t).join(' ').replace(/\s+,/g, ',');
-
-    const meta = {
-      id: `p2_${les.id}_${p2Idx % les.chunks.length}`,
-      mod: les.id,
-      scene: target.scene,
-      prompt: `Chọn câu đúng với tranh ${target.scene}:`,
-      word: target.full,
-      answer: target.full,
-      options: getDynamicSentenceOptions(target, 3)
     };
 
-    renderWorkspace();
-    const toast = document.getElementById('p2Toast');
-    if (built.toLowerCase() === expected.toLowerCase() || built.toLowerCase() === target.full.toLowerCase()) {
-      const res = recordResult(true, meta);
-      toast.innerHTML = `🚂 Chính xác (${res.sec}s): <b>"${target.full}"</b>! (+3 Sao ⭐)`;
-      speakText(target.full);
-      setTimeout(() => {
-        p2Idx++;
-        trainCars = [];
-        p2CachedPool = null;
-        renderWorkspace();
-      }, 1100);
-    } else {
-      recordResult(false, meta);
-      toast.innerHTML = `❌ Chưa đúng trật tự ngữ pháp! ${getPronoun()} nghe lại câu mẫu rồi lắp lại nhé!`;
-      setTimeout(() => {
-        trainCars = [];
-        renderWorkspace();
-      }, 1000);
-    }
-  };
+    /* =========================================================================
+       5. PHA 2: GHÉP ĐOÀN TÀU 3 TOA
+       ========================================================================= */
+    let p2Idx = 0;
+    let trainCars = [];
 
-  window.clearTrain = function() {
-    trainCars = [];
-    playSFX('tap');
-    renderWorkspace();
-  };
+    function renderP2_TrainBuilder(ws, les) {
+      const target = les.chunks[p2Idx % les.chunks.length];
+      const distractors = [
+        { t: 'two cats', ico: '🐱', c: 'o' },
+        { t: 'on the bed', ico: '🛏️', c: 'o' },
+        { t: 'ten cars', ico: '🚗', c: 'o' }
+      ];
+      const extra = distractors[p2Idx % distractors.length];
+      const pool = [...target.parts, extra].sort((a, b) => a.t.localeCompare(b.t));
 
-  /* =========================================================================
-     6. PHA 3: HỎI ĐÁP TRANH
-     ========================================================================= */
-  let p3Idx = 0;
-  function renderP3_VisualQA(ws, les) {
-    const qa = les.qaList[p3Idx % les.qaList.length];
-    ws.innerHTML = `
-      <div class="banner-box">
-        <div class="banner-title-wrap">
-          <h2>💬 Pha 3: Hỏi – Đáp Phản Xạ Theo Ngữ Cảnh</h2>
-          <p>Bấm <b>🔊 màu vàng</b> để nghe thử, sau đó chọn câu trả lời đúng (hoặc bấm phím số <b>1, 2, 3</b>).</p>
+      ws.innerHTML = `
+        <div class="banner-box">
+          <div class="banner-title-wrap">
+            <h2>🚂 Pha 2: Ghép Đoàn Tàu 3 Toa</h2>
+            <p>💡 Ngữ pháp: <b>${les.grammar.tip}</b></p>
+          </div>
+          <button class="hero-audio-btn" onclick="selectPhase('p3')">⏭️ Sang Pha 3: Hỏi Đáp</button>
         </div>
-        <button class="hero-audio-btn" onclick="selectPhase('p4')">⏭️ Sang Pha 4: Gõ Phím & Mic</button>
-      </div>
-      <div class="reflex-bar"><div class="reflex-fill" id="reflexFill"></div></div>
-      <div class="ergo-split">
-        <div class="left-deck">
-          ${qa.opts.map((opt, idx) => `
-            <div class="grade1-option-row">
-              <button class="preview-sound-btn" onclick="speakText('${escAttr(opt.txt)}')">
-                🔊<small>Nghe</small>
-              </button>
-              <button class="pick-chunk-btn" id="p3Opt_${idx}" onclick="submitQA('${escAttr(opt.txt)}', this)">
-                <span><b style="color:#2563eb;">[${idx+1}]</b> ${opt.ico} ${opt.txt}</span>
-              </button>
-            </div>
-          `).join('')}
-        </div>
-        <div class="right-stage">
-          <div style="font-size:115px;line-height:1.1;">${qa.scene}</div>
-          <h2 style="font-size:38px;margin:14px 0;color:#1e3a8a;">❓ "${qa.q}"</h2>
-          <button class="hero-audio-btn" onclick="speakText('${escAttr(qa.q)}')">
-            🔊 Nghe Câu Hỏi (Phím Space)
-          </button>
-          <div class="toast-box" id="p3Toast">👉 Nhìn ngữ cảnh ${qa.scene} và chọn câu trả lời đúng bên trái!</div>
-        </div>
-      </div>
-    `;
-    startReflex8s();
-  }
-
-  window.submitQA = function(chosen, btnEl) {
-    const les = getLesson();
-    const qa = les.qaList[p3Idx % les.qaList.length];
-    const toast = document.getElementById('p3Toast');
-    const meta = {
-      id: `p3_${les.id}_${p3Idx % les.qaList.length}`,
-      mod: les.id,
-      scene: qa.scene,
-      prompt: `Hỏi: "${qa.q}" (${qa.scene})`,
-      word: qa.ans,
-      answer: qa.ans,
-      options: qa.opts
-    };
-
-    if (chosen === qa.ans) {
-      const res = recordResult(true, meta);
-      btnEl.classList.add('correct');
-      toast.innerHTML = `🎉 Phản xạ tuyệt vời (${res.sec}s): <b>"${qa.ans}"</b>!`;
-      speakText(qa.ans);
-      setTimeout(() => {
-        p3Idx++;
-        renderWorkspace();
-      }, 1100);
-    } else {
-      recordResult(false, meta);
-      btnEl.classList.add('wrong');
-      toast.innerHTML = `❌ Chưa khớp với câu hỏi và tranh ${qa.scene}! Bấm 🔊 nghe thử lại nhé!`;
-    }
-  };
-
-  /* =========================================================================
-     7. PHA 4: GÕ BÀN PHÍM ĐÁNH VẦN & THUẬT TOÁN CHẤM PHÁT ÂM TỪNG TỪ
-     ========================================================================= */
-  let p4Idx = 0;
-  let typedCount = 0;
-  const KB_ROWS = [
-    ['q','w','e','r','t','y','u','i','o','p'],
-    ['a','s','d','f','g','h','j','k','l'],
-    ['z','x','c','v','b','n','m']
-  ];
-
-  function renderP4_KeyboardTyping(ws, les) {
-    const item = les.chunks[p4Idx % les.chunks.length];
-    const word = item.traceWord.toLowerCase();
-    const chars = word.split('');
-    const nextChar = chars[typedCount] || '';
-    const pron = getPronoun();
-
-    ws.innerHTML = `
-      <div class="banner-box">
-        <div class="banner-title-wrap">
-          <h2>⌨️ Pha 4: Gõ Phím Từ Khóa & Chấm Điểm Phát Âm AI</h2>
-          <p>Gõ từ khóa <b>"${word}"</b> trên bàn phím và bấm Mic đọc to cả câu để hệ thống chấm từng từ!</p>
-        </div>
-        <button class="hero-audio-btn" style="background:#7c3aed;" onclick="selectPhase('p6')">🏆 Sang Thi 4 Kỹ Năng</button>
-      </div>
-
-      <div class="ergo-split">
-        <div class="left-deck">
-          <button class="pick-chunk-btn" onclick="speakText('${escAttr(item.full)}')">
-            <span>🔊 1. Nghe Cả Câu Mẫu</span>
-          </button>
-          <button class="pick-chunk-btn" onclick="speakText('${escAttr(item.traceWord)}')">
-            <span>🎯 2. Nghe Riêng Từ: "${item.traceWord}"</span>
-          </button>
-          <button class="pick-chunk-btn" style="background:#eff6ff;border-color:#3b82f6;color:#1d4ed8;"
-                  onclick="testVoiceMic('${escAttr(item.full)}', 'p4Toast')">
-            <span>🎙️ 3. Bấm Mic Đọc To Cả Câu (Chấm Điểm)</span>
-          </button>
-          <button class="pick-chunk-btn" onclick="resetTypingWord()">
-            <span>🔄 Xóa Gõ Lại Từ Đầu</span>
-          </button>
-          <button class="hero-audio-btn" style="justify-content:center;background:#16a34a;padding:15px;"
-                  onclick="nextP4Word('${escAttr(item.full)}')">
-            ⏭️ Qua Câu Tiếp Theo (+3 Sao)
-          </button>
-        </div>
-
-        <div class="right-stage">
-          <div class="typing-arena">
-            <div style="font-size:88px;line-height:1;">${item.scene}</div>
-            <div style="font-size:30px;font-weight:900;color:#1e3a8a;">
-              Câu: "${item.full}"
-            </div>
-
-            <div class="letter-slots-row">
-              ${chars.map((ch, idx) => {
-                let stClass = '';
-                if (idx < typedCount) stClass = 'typed-ok';
-                else if (idx === typedCount) stClass = 'current-target';
-                return `<div class="key-slot ${stClass}" id="slot_${idx}">${ch}</div>`;
-              }).join('')}
-            </div>
-
-            <div class="onscreen-keyboard">
-              ${KB_ROWS.map(row => `
-                <div class="kb-row">
-                  ${row.map(k => `
-                    <button class="kb-key ${k === nextChar ? 'highlight-hint' : ''}"
-                            onclick="handleKeyInput('${k}')">
-                      ${k}
-                    </button>
+        <div class="reflex-bar"><div class="reflex-fill" id="reflexFill"></div></div>
+        <div class="ergo-split">
+          <div class="left-deck">
+            ${pool.map((b, idx) => `
+              <div class="grade1-option-row">
+                <button class="preview-sound-btn" onclick="speakText('${b.t}')">
+                  🔊<small>Nghe</small>
+                </button>
+                <button class="pick-chunk-btn" id="p2Opt_${idx}" onclick="addTrainCar('${b.t}', '${b.ico}')">
+                  <span><b style="color:#2563eb;">[${idx+1}]</b> ${b.ico} ${b.t}</span>
+                  <span class="c-pill ${b.c}" style="font-size:15px;padding:6px 12px;">➕ Lắp</span>
+                </button>
+              </div>
+            `).join('')}
+            <button class="pick-chunk-btn" style="background:#fee2e2;color:#b91c1c;justify-content:center;font-size:20px;padding:12px;" onclick="clearTrain()">
+              🔄 Xóa Lắp Lại Từ Đầu (Phím Backspace)
+            </button>
+          </div>
+          <div class="right-stage">
+            <div style="font-size:110px;line-height:1.1;">${target.scene}</div>
+            <button class="hero-audio-btn" style="margin-top:10px;" onclick="speakText('${target.full}')">
+              🔊 Nghe Cả Câu Mẫu (Phím Space)
+            </button>
+            <div class="train-track">
+              <span style="font-size:50px;">🚂</span>
+              ${trainCars.length === 0
+                ? `<span style="color:#64748b;font-weight:800;font-size:24px;">Chọn 3 toa tàu bên trái để nối vào đầu tàu...</span>`
+                : trainCars.map((car, i) => `
+                    <span class="train-car car-${i}">${car.ico} ${car.t}</span>
                   `).join('')}
-                </div>
-              `).join('')}
             </div>
-
-            <div class="toast-box" id="p4Toast" style="flex-direction:column;gap:4px;">
-              ${typedCount < chars.length
-                ? `<span>⌨️ Hãy gõ phím chữ <b style="color:#d97706;font-size:26px;margin:0 8px;">"${nextChar.toUpperCase()}"</b> trên bàn phím máy tính!</span>`
-                : `<span>🎉 Tuyệt vời! ${pron} đã gõ xong từ <b>"${word.toUpperCase()}"</b>! Hãy bấm <b>🎙️ Mic</b> bên trái để luyện phát âm cả câu!</span>`}
+            <div class="toast-box" id="p2Toast">
+              ${zenMode ? '🧘 Chế độ thư giãn: Con cứ nghe thử từng toa rồi ghép nhé!' : '⏱️ Ghép đủ 3 toa tàu trong 8 giây nhé!'}
             </div>
           </div>
         </div>
-      </div>
-    `;
-  }
+      `;
+      if (trainCars.length === 0) startReflex8s();
+    }
 
-  window.handleKeyInput = function(pressedKey) {
-    if (curPhase === 'p4') {
+    window.addTrainCar = function(t, ico) {
       const les = getLesson();
+      const target = les.chunks[p2Idx % les.chunks.length];
+      if (trainCars.length >= target.parts.length) return;
+
+      trainCars.push({ t, ico });
+      speakText(t);
+
+      if (trainCars.length < target.parts.length) {
+        renderWorkspace();
+        return;
+      }
+
+      const built = trainCars.map(x => x.t).join(' ');
+      const meta = {
+        id: `p2_${les.id}_${p2Idx % les.chunks.length}`,
+        mod: les.id,
+        scene: target.scene,
+        prompt: `Chọn câu đúng với tranh ${target.scene}:`,
+        word: target.full,
+        answer: target.full,
+        options: les.chunks.slice(0, 3).map(c => ({ txt: c.full, ico: c.scene }))
+      };
+
+      renderWorkspace();
+      const toast = document.getElementById('p2Toast');
+      if (built === target.full) {
+        const res = recordResult(true, meta);
+        toast.innerHTML = `🚂 Đoàn tàu lăn bánh (${res.sec}s): <b>"${target.full}"</b>! (+3 Sao ⭐)`;
+        speakText(target.full);
+        setTimeout(() => {
+          p2Idx++;
+          trainCars = [];
+          renderWorkspace();
+        }, 1100);
+      } else {
+        recordResult(false, meta);
+        toast.innerHTML = `❌ Chưa đúng thứ tự toa tàu! Con nghe lại câu mẫu rồi lắp lại nhé!`;
+        setTimeout(() => {
+          trainCars = [];
+          renderWorkspace();
+        }, 1000);
+      }
+    };
+
+    window.clearTrain = function() {
+      trainCars = [];
+      playSFX('tap');
+      renderWorkspace();
+    };
+
+    /* =========================================================================
+       6. PHA 3: HỎI ĐÁP TRANH
+       ========================================================================= */
+    let p3Idx = 0;
+    function renderP3_VisualQA(ws, les) {
+      const qa = les.qaList[p3Idx % les.qaList.length];
+      ws.innerHTML = `
+        <div class="banner-box">
+          <div class="banner-title-wrap">
+            <h2>💬 Pha 3: Hỏi – Đáp Nhìn Tranh</h2>
+            <p>Bấm <b>🔊 màu vàng</b> để nghe thử, sau đó chọn câu trả lời đúng (hoặc bấm phím số <b>1, 2, 3</b>).</p>
+          </div>
+          <button class="hero-audio-btn" onclick="selectPhase('p4')">⏭️ Sang Pha 4: Gõ Phím</button>
+        </div>
+        <div class="reflex-bar"><div class="reflex-fill" id="reflexFill"></div></div>
+        <div class="ergo-split">
+          <div class="left-deck">
+            ${qa.opts.map((opt, idx) => `
+              <div class="grade1-option-row">
+                <button class="preview-sound-btn" onclick="speakText('${opt.txt}')">
+                  🔊<small>Nghe</small>
+                </button>
+                <button class="pick-chunk-btn" id="p3Opt_${idx}" onclick="submitQA('${opt.txt}', this)">
+                  <span><b style="color:#2563eb;">[${idx+1}]</b> ${opt.ico} ${opt.txt}</span>
+                </button>
+              </div>
+            `).join('')}
+          </div>
+          <div class="right-stage">
+            <div style="font-size:115px;line-height:1.1;">${qa.scene}</div>
+            <h2 style="font-size:42px;margin:14px 0;color:#1e3a8a;">❓ "${qa.q}"</h2>
+            <button class="hero-audio-btn" onclick="speakText('${qa.q}')">
+              🔊 Nghe Câu Hỏi (Phím Space)
+            </button>
+            <div class="toast-box" id="p3Toast">👉 Nhìn tranh ${qa.scene} và chọn câu trả lời đúng bên trái!</div>
+          </div>
+        </div>
+      `;
+      startReflex8s();
+    }
+
+    window.submitQA = function(chosen, btnEl) {
+      const les = getLesson();
+      const qa = les.qaList[p3Idx % les.qaList.length];
+      const toast = document.getElementById('p3Toast');
+      const meta = {
+        id: `p3_${les.id}_${p3Idx % les.qaList.length}`,
+        mod: les.id,
+        scene: qa.scene,
+        prompt: `Hỏi: "${qa.q}" (${qa.scene})`,
+        word: qa.ans,
+        answer: qa.ans,
+        options: qa.opts
+      };
+
+      if (chosen === qa.ans) {
+        const res = recordResult(true, meta);
+        btnEl.classList.add('correct');
+        toast.innerHTML = `🎉 Giỏi quá (${res.sec}s): <b>"${qa.ans}"</b>!`;
+        speakText(qa.ans);
+        setTimeout(() => {
+          p3Idx++;
+          renderWorkspace();
+        }, 1100);
+      } else {
+        recordResult(false, meta);
+        btnEl.classList.add('wrong');
+        toast.innerHTML = `❌ Chưa khớp với tranh ${qa.scene}! Bấm 🔊 nghe thử lại nhé!`;
+      }
+    };
+
+    /* =========================================================================
+       7. PHA 4: GÕ BÀN PHÍM ĐÁNH VẦN CỠ ĐẠI & ĐỌC MIC
+       ========================================================================= */
+    let p4Idx = 0;
+    let typedCount = 0;
+    const KB_ROWS = [
+      ['q','w','e','r','t','y','u','i','o','p'],
+      ['a','s','d','f','g','h','j','k','l'],
+      ['z','x','c','v','b','n','m']
+    ];
+
+    function renderP4_KeyboardTyping(ws, les) {
       const item = les.chunks[p4Idx % les.chunks.length];
       const word = item.traceWord.toLowerCase();
-      if (typedCount >= word.length) return;
+      const chars = word.split('');
+      const nextChar = chars[typedCount] || '';
 
-      const expected = word[typedCount];
-      const slotEl = document.getElementById(`slot_${typedCount}`);
-      const toast = document.getElementById('p4Toast');
+      ws.innerHTML = `
+        <div class="banner-box">
+          <div class="banner-title-wrap">
+            <h2>⌨️ Pha 4: Gõ Bàn Phím Đánh Vần & Đọc Nhại</h2>
+            <p>Tìm chữ cái đang <b>sáng màu vàng</b> trên bàn phím máy tính và gõ từng chữ để hoàn thành từ khóa!</p>
+          </div>
+          <button class="hero-audio-btn" style="background:#7c3aed;" onclick="selectPhase('p6')">🏆 Sang Thi 4 Kỹ Năng</button>
+        </div>
+
+        <div class="ergo-split">
+          <div class="left-deck">
+            <button class="pick-chunk-btn" onclick="speakText('${item.full}')">
+              <span>🔊 1. Nghe Cả Câu Mẫu</span>
+            </button>
+            <button class="pick-chunk-btn" onclick="speakText('${item.traceWord}')">
+              <span>🎯 2. Nghe Riêng Từ: "${item.traceWord}"</span>
+            </button>
+            <button class="pick-chunk-btn" style="background:#eff6ff;border-color:#3b82f6;color:#1d4ed8;"
+                    onclick="testVoiceMic('${item.full}', 'p4Toast')">
+              <span>🎙️ 3. Bấm Mic Đọc To Cả Câu</span>
+            </button>
+            <button class="pick-chunk-btn" onclick="resetTypingWord()">
+              <span>🔄 Xóa Gõ Lại Từ Đầu</span>
+            </button>
+            <button class="hero-audio-btn" style="justify-content:center;background:#16a34a;padding:15px;"
+                    onclick="nextP4Word('${item.full}')">
+              ⏭️ Qua Từ Tiếp Theo (+3 Sao)
+            </button>
+          </div>
+
+          <div class="right-stage">
+            <div class="typing-arena">
+              <div style="font-size:88px;line-height:1;">${item.scene}</div>
+              <div style="font-size:32px;font-weight:900;color:#1e3a8a;">
+                Câu: "${item.full}"
+              </div>
+
+              <div class="letter-slots-row">
+                ${chars.map((ch, idx) => {
+                  let stClass = '';
+                  if (idx < typedCount) stClass = 'typed-ok';
+                  else if (idx === typedCount) stClass = 'current-target';
+                  return `<div class="key-slot ${stClass}" id="slot_${idx}">${ch}</div>`;
+                }).join('')}
+              </div>
+
+              <div class="onscreen-keyboard">
+                ${KB_ROWS.map(row => `
+                  <div class="kb-row">
+                    ${row.map(k => `
+                      <button class="kb-key ${k === nextChar ? 'highlight-hint' : ''}"
+                              onclick="handleKeyInput('${k}')">
+                        ${k}
+                      </button>
+                    `).join('')}
+                  </div>
+                `).join('')}
+              </div>
+
+              <div class="toast-box" id="p4Toast">
+                ${typedCount < chars.length
+                  ? `⌨️ Hãy gõ phím chữ <b style="color:#d97706;font-size:26px;margin:0 8px;">"${nextChar.toUpperCase()}"</b> trên bàn phím máy tính!`
+                  : `🎉 Tuyệt vời! Con đã gõ xong từ <b>"${word.toUpperCase()}"</b>!`}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    window.handleKeyInput = function(pressedKey) {
+      if (curPhase === 'p4') {
+        const les = getLesson();
+        const item = les.chunks[p4Idx % les.chunks.length];
+        const word = item.traceWord.toLowerCase();
+        if (typedCount >= word.length) return;
+
+        const expected = word[typedCount];
+        const slotEl = document.getElementById(`slot_${typedCount}`);
+        const toast = document.getElementById('p4Toast');
+
+        if (pressedKey.toLowerCase() === expected) {
+          playSFX('key');
+          typedCount++;
+          renderWorkspace();
+          if (typedCount === word.length) {
+            setTimeout(() => {
+              playSFX('ok');
+              stars += 3;
+              CS.setStars(stars);
+              syncSidebarUI();
+              speakText(`${word}! ${item.full}`);
+              const t = document.getElementById('p4Toast');
+              if (t) t.innerHTML = `🌟 Xuất sắc (+3 Sao)! Con hãy đọc to: <b>"${item.full}"</b>!`;
+            }, 150);
+          }
+        } else {
+          playSFX('err');
+          if (slotEl) {
+            slotEl.classList.add('wrong-key');
+            setTimeout(() => slotEl.classList.remove('wrong-key'), 350);
+          }
+          if (toast) {
+            toast.innerHTML = `❌ Con vừa gõ "${pressedKey.toUpperCase()}". Hãy tìm phím chữ <b style="color:#dc2626;font-size:26px;margin:0 6px;">"${expected.toUpperCase()}"</b> đang sáng vàng nhé!`;
+          }
+        }
+      } else if (curPhase === 'p6') {
+        handleExamWriteKey(pressedKey);
+      }
+    };
+
+    window.resetTypingWord = function() {
+      typedCount = 0;
+      playSFX('tap');
+      renderWorkspace();
+    };
+
+    window.nextP4Word = function(sentence) {
+      speakText(sentence);
+      typedCount = 0;
+      p4Idx++;
+      renderWorkspace();
+    };
+
+    window.testVoiceMic = function(targetSentence, toastId, onSuccessCallback = null) {
+      const toast = document.getElementById(toastId);
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRec) {
+        speakText(targetSentence);
+        if (toast) toast.innerHTML = `🎙️ Con hãy đọc to câu: <b>"${targetSentence}"</b> rồi bấm nút Xác nhận nhé!`;
+        return;
+      }
+      const rec = new SpeechRec();
+      rec.lang = 'en-US';
+      rec.interimResults = false;
+      if (toast) toast.innerHTML = `🎙️ Máy đang nghe... Con đọc to câu tiếng Anh nhé!`;
+      rec.onresult = e => {
+        const heard = e.results[0][0].transcript.toLowerCase().trim();
+        playSFX('ok');
+        stars += 3;
+        CS.setStars(stars);
+        syncSidebarUI();
+        if (toast) toast.innerHTML = `🎉 Giỏi lắm! Máy nghe được con đọc: <b>"${heard}"</b> (+3 Sao ⭐)`;
+        if (onSuccessCallback) onSuccessCallback();
+      };
+      rec.onerror = () => {
+        speakText(targetSentence);
+        if (toast) toast.innerHTML = `💡 Con đọc to <b>"${targetSentence}"</b> rồi bấm nút Hoàn thành bên trái nhé!`;
+      };
+      rec.start();
+    };
+
+    /* =========================================================================
+       8. PHA 5: CHƠI CÙNG BỐ MẸ NGOÀI ĐỜI THỰC
+       ========================================================================= */
+    function renderP5_ParentMission(ws, les) {
+      const gm = les.parentGame;
+      ws.innerHTML = `
+        <div class="banner-box" style="background:#fef3c7;border-color:#f59e0b;">
+          <div class="banner-title-wrap">
+            <h2 style="color:#b45309;">🎲 Pha 5: Tương Tác Đời Thực Cùng Bố Mẹ</h2>
+            <p>Rời màn hình 10 phút và thực hành phản xạ sống ngay trong nhà!</p>
+          </div>
+          <button class="hero-audio-btn" style="background:#7c3aed;" onclick="selectPhase('p6')">🏆 Vào Thi 4 Kỹ Năng</button>
+        </div>
+        <div class="right-stage" style="flex:1;">
+          <div class="mission-card">
+            <h3>${gm.title}</h3>
+            ${gm.steps.map(s => `<div class="mission-step">${s}</div>`).join('')}
+            <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+              ${les.chunks.map(c => `
+                <button class="preview-sound-btn" style="width:auto;padding:10px 16px;font-size:18px;flex-direction:row;gap:8px;"
+                        onclick="speakText('${c.full}')">
+                  🔊 ${c.scene} "${c.full}"
+                </button>
+              `).join('')}
+            </div>
+            <div style="margin-top:20px;text-align:center;">
+              <button class="hero-audio-btn" style="background:#16a34a;font-size:21px;padding:14px 28px;" onclick="rewardParentMission()">
+                🏆 Đã Hoàn Thành Trò Chơi Cùng Bố Mẹ (+10 Sao ⭐)
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    window.rewardParentMission = function() {
+      playSFX('ok');
+      stars += 10;
+      CS.setStars(stars);
+      syncSidebarUI();
+      speakText('Awesome job! High five!');
+    };
+
+    /* =========================================================================
+       9. TAB 6 MỚI: PHÒNG THI TOÀN DIỆN 4 KỸ NĂNG (NGHE - ĐỌC - VIẾT - NÓI)
+       - Cho phép chọn: [Thi Bài Hiện Tại (8 câu)] hoặc [Thi Cả Module A+B+C (12 câu)]
+       - Tháo bỏ toàn bộ "bánh phụ":
+         + Nghe: Không hiện chữ đề bài, chỉ nghe âm thanh chọn tranh
+         + Đọc: Không có âm thanh nghe thử, đọc chữ thuần túy chọn tranh
+         + Viết: Ô chữ trống không có chữ mờ, bàn phím không sáng vàng gợi ý
+         + Nói: Nhìn tranh tự nói cả câu không có chữ nhắc
+       ========================================================================= */
+    let examScope = 'lesson'; // 'lesson' (8 câu) | 'module' (12 câu)
+    let examQuestions = [];
+    let examCurIdx = 0;
+    let examTypedCount = 0;
+    let examHintUsed = false;
+    let examScores = { listen: 0, read: 0, write: 0, speak: 0, totalEach: 2 };
+
+    function buildExamQuestions(scope) {
+      examScope = scope;
+      const modLessons = getModuleLessons();
+      const sourceLessons = scope === 'lesson' ? [getLesson()] : modLessons;
+      const allChunks = [];
+      sourceLessons.forEach(l => {
+        l.chunks.forEach(ch => allChunks.push({ ...ch, lesId: l.id }));
+      });
+
+      const countPerSkill = scope === 'lesson' ? 2 : 3;
+      examScores = { listen: 0, read: 0, write: 0, speak: 0, totalEach: countPerSkill };
+      examQuestions = [];
+
+      const pickRandom = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
+
+      // 1. Kỹ năng NGHE (Listening)
+      pickRandom(allChunks, countPerSkill).forEach(item => {
+        const others = pickRandom(allChunks.filter(x => x.full !== item.full), 2);
+        const opts = [...others.map(o => ({ scene: o.scene, full: o.full })), { scene: item.scene, full: item.full }]
+          .sort(() => Math.random() - 0.5);
+        examQuestions.push({ skill: 'listen', target: item, opts });
+      });
+
+      // 2. Kỹ năng ĐỌC HIỂU MẶT CHỮ (Reading)
+      pickRandom(allChunks, countPerSkill).forEach(item => {
+        const others = pickRandom(allChunks.filter(x => x.full !== item.full), 2);
+        const opts = [...others.map(o => o.full), item.full].sort(() => Math.random() - 0.5);
+        examQuestions.push({ skill: 'read', target: item, opts });
+      });
+
+      // 3. Kỹ năng VIẾT BÀN PHÍM KHÔNG GỢI Ý (Writing)
+      pickRandom(allChunks, countPerSkill).forEach(item => {
+        examQuestions.push({ skill: 'write', target: item });
+      });
+
+      // 4. Kỹ năng NÓI PHẢN XẠ (Speaking)
+      pickRandom(allChunks, countPerSkill).forEach(item => {
+        examQuestions.push({ skill: 'speak', target: item });
+      });
+
+      examCurIdx = 0;
+      examTypedCount = 0;
+      examHintUsed = false;
+    }
+
+    window.switchExamScope = function(scope) {
+      buildExamQuestions(scope);
+      playSFX('tap');
+      renderWorkspace();
+    };
+
+    function renderP6_ComprehensiveExam(ws, les) {
+      if (examQuestions.length === 0) buildExamQuestions(examScope);
+
+      // Nếu đã hoàn thành hết các câu hỏi -> Hiển thị Bảng Điểm Toàn Diện 4 Kỹ Năng
+      if (examCurIdx >= examQuestions.length) {
+        const maxPerSkill = examScores.totalEach;
+        const totalRight = examScores.listen + examScores.read + examScores.write + examScores.speak;
+        const totalMax = maxPerSkill * 4;
+        const pct = Math.round((totalRight / totalMax) * 100);
+
+        ws.innerHTML = `
+          <div class="right-stage" style="flex:1;">
+            <div style="font-size:90px;">${pct >= 80 ? '🏆🌟' : '🎖️👍'}</div>
+            <h2 style="font-size:36px;margin:6px 0;color:#1e3a8a;">
+              KẾT QUẢ THI TOÀN DIỆN 4 KỸ NĂNG: ${pct}/100 ĐIỂM
+            </h2>
+            <p style="font-size:19px;color:#475569;margin:0;">
+              Phạm vi: <b>${examScope === 'lesson' ? les.name : `Toàn bộ Module ${curMod} (3 Bài A+B+C)`}</b>
+            </p>
+
+            <div class="exam-score-grid">
+              <div class="score-card">
+                <h4>🎧 1. NGHE HIỂU</h4>
+                <b>${examScores.listen}/${maxPerSkill}</b>
+              </div>
+              <div class="score-card">
+                <h4>📖 2. ĐỌC MẶT CHỮ</h4>
+                <b>${examScores.read}/${maxPerSkill}</b>
+              </div>
+              <div class="score-card">
+                <h4>⌨️ 3. VIẾT CHÍNH TẢ</h4>
+                <b>${examScores.write}/${maxPerSkill}</b>
+              </div>
+              <div class="score-card">
+                <h4>🎙️ 4. NÓI PHẢN XẠ</h4>
+                <b>${examScores.speak}/${maxPerSkill}</b>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:14px;">
+              <button class="hero-audio-btn" onclick="switchExamScope('lesson')">
+                🔄 Thi Lại Bài Này (8 Câu)
+              </button>
+              <button class="hero-audio-btn" style="background:#7c3aed;" onclick="switchExamScope('module')">
+                🏆 Thi Vượt Ải Cả Module ${curMod} (12 Câu)
+              </button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const q = examQuestions[examCurIdx];
+      const skillMeta = {
+        listen: { name: '🎧 KỸ NĂNG 1: NGHE HIỂU (ẨN CHỮ - CHỈ NGHE TAI)', bg: '#0284c7' },
+        read:   { name: '📖 KỸ NĂNG 2: ĐỌC MẶT CHỮ (KHÔNG NGHE THỬ - TỰ ĐỌC)', bg: '#16a34a' },
+        write:  { name: '⌨️ KỸ NĂNG 3: VIẾT CHÍNH TẢ (TỰ NHỚ CHỮ GÕ PHÍM)', bg: '#d97706' },
+        speak:  { name: '🎙️ KỸ NĂNG 4: NÓI PHẢN XẠ (NHÌN TRANH TỰ NÓI CẢ CÂU)', bg: '#7c3aed' }
+      }[q.skill];
+
+      let leftHtml = '';
+      let rightHtml = '';
+
+      if (q.skill === 'listen') {
+        leftHtml = `
+          <h3 style="margin:0;color:#1e3a8a;font-size:22px;">👈 Chọn bức tranh đúng với câu vừa nghe:</h3>
+          ${q.opts.map((opt, idx) => `
+            <button class="pick-chunk-btn" id="exOpt_${idx}" style="font-size:38px;justify-content:center;padding:18px;"
+                    onclick="submitExamChoice('${opt.full}', this)">
+              <b style="font-size:24px;color:#2563eb;margin-right:16px;">[${idx+1}]</b> ${opt.scene}
+            </button>
+          `).join('')}
+        `;
+        rightHtml = `
+          <span class="exam-skill-pill" style="background:${skillMeta.bg};">${skillMeta.name}</span>
+          <div style="font-size:110px;margin:16px 0;">🎧❓</div>
+          <button class="hero-audio-btn" style="font-size:24px;padding:18px 34px;" onclick="speakText('${q.target.full}')">
+            🔊 Bấm Nghe Câu Tiếng Anh (Phím Space)
+          </button>
+          <div class="toast-box" id="examToast">👂 Không có chữ gợi ý! Con hãy nghe kỹ và chọn tranh bên trái!</div>
+        `;
+        setTimeout(() => speakText(q.target.full), 200);
+      } else if (q.skill === 'read') {
+        leftHtml = `
+          <h3 style="margin:0;color:#15803d;font-size:22px;">👈 Tự đọc bằng mắt và chọn câu đúng:</h3>
+          ${q.opts.map((txt, idx) => `
+            <button class="pick-chunk-btn" id="exOpt_${idx}" style="font-size:28px;padding:20px;"
+                    onclick="submitExamChoice('${txt}', this)">
+              <span><b style="color:#16a34a;">[${idx+1}]</b> ${txt}</span>
+            </button>
+          `).join('')}
+        `;
+        rightHtml = `
+          <span class="exam-skill-pill" style="background:${skillMeta.bg};">${skillMeta.name}</span>
+          <div style="font-size:125px;margin:14px 0;">${q.target.scene}</div>
+          <div class="toast-box" id="examToast">👀 Đã tắt loa nghe thử! Con hãy tự đọc 3 câu bên trái và chọn câu khớp với tranh!</div>
+        `;
+      } else if (q.skill === 'write') {
+        const word = q.target.traceWord.toLowerCase();
+        const chars = word.split('');
+        const maskedSentence = q.target.full.replace(new RegExp(q.target.traceWord, 'i'), '______');
+
+        leftHtml = `
+          <h3 style="margin:0;color:#b45309;font-size:22px;">👈 Trợ giúp Thi Viết:</h3>
+          <button class="pick-chunk-btn" onclick="speakText('${q.target.traceWord}')">
+            <span>🔊 1. Nghe Lại Từ Cần Viết</span>
+          </button>
+          <button class="pick-chunk-btn" onclick="speakText('${q.target.full}')">
+            <span>🔊 2. Nghe Cả Câu Đầy Đủ</span>
+          </button>
+          <button class="pick-chunk-btn" style="background:#fef3c7;border-color:#f59e0b;color:#b45309;" onclick="revealOneExamLetter()">
+            <span>💡 3. Gợi Ý 1 Chữ Cái Tiếp Theo</span>
+          </button>
+        `;
+        rightHtml = `
+          <span class="exam-skill-pill" style="background:${skillMeta.bg};">${skillMeta.name}</span>
+          <div style="font-size:86px;line-height:1;">${q.target.scene}</div>
+          <div style="font-size:32px;font-weight:900;color:#1e3a8a;margin:6px 0;">
+            Điền từ vào câu: "${maskedSentence}"
+          </div>
+          <div class="letter-slots-row">
+            ${chars.map((ch, idx) => {
+              const isTyped = idx < examTypedCount;
+              return `
+                <div class="key-slot ${isTyped ? 'typed-ok' : 'blind-slot'} ${idx === examTypedCount ? 'current-target' : ''}" id="exSlot_${idx}">
+                  ${isTyped ? ch : '_'}
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <div class="onscreen-keyboard">
+            ${KB_ROWS.map(row => `
+              <div class="kb-row">
+                ${row.map(k => `
+                  <button class="kb-key ${examHintUsed && k === chars[examTypedCount] ? 'highlight-hint' : ''}"
+                          onclick="handleExamWriteKey('${k}')">
+                    ${k}
+                  </button>
+                `).join('')}
+              </div>
+            `).join('')}
+          </div>
+          <div class="toast-box" id="examToast">⌨️ Tự nhớ mặt chữ và gõ từ khóa (${word.length} chữ cái) trên bàn phím!</div>
+        `;
+        if (examTypedCount === 0 && !examHintUsed) {
+          setTimeout(() => speakText(q.target.traceWord), 200);
+        }
+      } else if (q.skill === 'speak') {
+        leftHtml = `
+          <h3 style="margin:0;color:#6b21a8;font-size:22px;">👈 Kiểm tra Nói Phản Xạ:</h3>
+          <button class="pick-chunk-btn" style="background:#faf5ff;border-color:#9333ea;color:#6b21a8;"
+                  onclick="testVoiceMic('${q.target.full}', 'examToast', () => passSpeakingExam(true))">
+            <span>🎙️ 1. Bấm Mic Nói To Cả Câu</span>
+          </button>
+          <button class="pick-chunk-btn" onclick="speakText('${q.target.full}')">
+            <span>🔊 2. Nghe Đáp Án Mẫu Để Kiểm Chứng</span>
+          </button>
+          <button class="hero-audio-btn" style="background:#16a34a;justify-content:center;padding:16px;"
+                  onclick="passSpeakingExam(true)">
+            ✅ Con Đã Nói Trôi Chảy (Đạt Điểm)
+          </button>
+          <button class="pick-chunk-btn" style="background:#fee2e2;color:#b91c1c;justify-content:center;"
+                  onclick="passSpeakingExam(false)">
+            ❌ Con Còn Quên Câu (Đưa Vào Hộp Ôn)
+          </button>
+        `;
+        rightHtml = `
+          <span class="exam-skill-pill" style="background:${skillMeta.bg};">${skillMeta.name}</span>
+          <div style="font-size:125px;margin:14px 0;">${q.target.scene}</div>
+          <h2 style="font-size:36px;color:#6b21a8;margin:8px 0;">
+            🎤 Nhìn tranh và nói to cả câu tiếng Anh!
+          </h2>
+          <div class="toast-box" id="examToast">👉 Con tự nói to câu mô tả bức tranh trên (không nhìn chữ), sau đó bấm Mic hoặc nút Xanh bên trái!</div>
+        `;
+      }
+
+      ws.innerHTML = `
+        <div class="banner-box" style="background:#faf5ff;border-color:#d8b4fe;">
+          <div class="banner-title-wrap">
+            <h2 style="color:#6b21a8;">🏆 Trạm Kiểm Tra 4 Kỹ Năng (Câu ${examCurIdx + 1}/${examQuestions.length})</h2>
+            <p>Đánh giá thực chất Nghe – Đọc – Viết – Nói không có gợi ý</p>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="lesson-pill ${examScope==='lesson'?'active':''}" onclick="switchExamScope('lesson')">
+              📝 Thi Bài Hiện Tại (8 câu)
+            </button>
+            <button class="lesson-pill ${examScope==='module'?'active':''}" onclick="switchExamScope('module')">
+              🏅 Thi Cả Module ${curMod} (12 câu)
+            </button>
+          </div>
+        </div>
+        <div class="ergo-split">
+          <div class="left-deck">${leftHtml}</div>
+          <div class="right-stage">${rightHtml}</div>
+        </div>
+      `;
+    }
+
+    window.submitExamChoice = function(chosen, btnEl) {
+      const q = examQuestions[examCurIdx];
+      const toast = document.getElementById('examToast');
+      const isOk = chosen === q.target.full;
+
+      if (isOk) {
+        btnEl.classList.add('correct');
+        playSFX('ok');
+        speakText(q.target.full);
+        examScores[q.skill] += 1;
+        stars += 4;
+        CS.setStars(stars);
+        syncSidebarUI();
+        toast.innerHTML = `🎉 Chính xác! <b>"${q.target.full}"</b> (+4 Sao ⭐)`;
+      } else {
+        btnEl.classList.add('wrong');
+        playSFX('err');
+        recordResult(false, {
+          id: `exam_${q.target.lesId}_${q.target.traceWord}`,
+          mod: q.target.lesId,
+          scene: q.target.scene,
+          prompt: `Ôn lại câu của tranh ${q.target.scene}:`,
+          word: q.target.full,
+          answer: q.target.full,
+          options: [{ txt: q.target.full, ico: q.target.scene }, { txt: 'I am hungry', ico: '🍔' }, { txt: 'Two cats', ico: '🐱' }]
+        });
+        toast.innerHTML = `❌ Chưa đúng! Đáp án là: <b>"${q.target.full}"</b> (Đã lưu vào Hộp 1 để ôn lại)`;
+      }
+
+      setTimeout(() => {
+        examCurIdx++;
+        renderWorkspace();
+      }, 1250);
+    };
+
+    window.revealOneExamLetter = function() {
+      examHintUsed = true;
+      playSFX('tap');
+      renderWorkspace();
+    };
+
+    window.handleExamWriteKey = function(pressedKey) {
+      const q = examQuestions[examCurIdx];
+      if (!q || q.skill !== 'write') return;
+      const word = q.target.traceWord.toLowerCase();
+      if (examTypedCount >= word.length) return;
+
+      const expected = word[examTypedCount];
+      const slotEl = document.getElementById(`exSlot_${examTypedCount}`);
+      const toast = document.getElementById('examToast');
 
       if (pressedKey.toLowerCase() === expected) {
         playSFX('key');
-        typedCount++;
+        examTypedCount++;
+        examHintUsed = false;
         renderWorkspace();
-        if (typedCount === word.length) {
+
+        if (examTypedCount === word.length) {
+          playSFX('ok');
+          examScores.write += 1;
+          stars += 5;
+          CS.setStars(stars);
+          syncSidebarUI();
+          speakText(`${word}! ${q.target.full}`);
+          const t = document.getElementById('examToast');
+          if (t) t.innerHTML = `🎉 Viết chính tả chuẩn xác: <b>"${word.toUpperCase()}"</b> (+5 Sao ⭐)!`;
           setTimeout(() => {
-            playSFX('ok');
-            stars += 3;
-            localStorage.setItem('s1_g1_stars', stars);
-            syncSidebarUI();
-            speakText(`${word}! ${item.full}`);
-            const t = document.getElementById('p4Toast');
-            if (t) t.innerHTML = `🌟 Xuất sắc (+3 Sao)! Hãy bấm Mic đọc to: <b>"${item.full}"</b>!`;
-          }, 150);
+            examTypedCount = 0;
+            examCurIdx++;
+            renderWorkspace();
+          }, 1250);
         }
       } else {
         playSFX('err');
@@ -1723,512 +2011,35 @@
           slotEl.classList.add('wrong-key');
           setTimeout(() => slotEl.classList.remove('wrong-key'), 350);
         }
-        if (toast) {
-          toast.innerHTML = `❌ Vừa gõ "${pressedKey.toUpperCase()}". Hãy tìm phím chữ <b style="color:#dc2626;font-size:26px;margin:0 6px;">"${expected.toUpperCase()}"</b> đang sáng vàng nhé!`;
-        }
-      }
-    } else if (curPhase === 'p6') {
-      handleExamWriteKey(pressedKey);
-    }
-  };
-
-  window.resetTypingWord = function() {
-    typedCount = 0;
-    playSFX('tap');
-    renderWorkspace();
-  };
-
-  window.nextP4Word = function(sentence) {
-    speakText(sentence);
-    typedCount = 0;
-    p4Idx++;
-    renderWorkspace();
-  };
-
-  // Thuật toán chấm điểm phát âm từng từ (Word-level Speech Evaluation)
-  function evaluateSpeechAccuracy(targetSentence, spokenText) {
-    const clean = str => str.toLowerCase().replace(/[^a-z0-9\s']/g, '').trim().split(/\s+/).filter(Boolean);
-    const targetWords = clean(targetSentence);
-    const spokenWords = clean(spokenText);
-
-    let matched = 0;
-    const usedIndices = new Set();
-
-    const wordDiffHtml = targetWords.map(tw => {
-      const foundIdx = spokenWords.findIndex((sw, idx) => !usedIndices.has(idx) && sw === tw);
-      if (foundIdx !== -1) {
-        usedIndices.add(foundIdx);
-        matched++;
-        return `<span style="color:#15803d;text-decoration:underline;">${tw}</span>`;
-      }
-      return `<span style="color:#dc2626;background:#fee2e2;padding:0 4px;border-radius:4px;">${tw}</span>`;
-    }).join(' ');
-
-    const accuracy = targetWords.length > 0 ? Math.round((matched / targetWords.length) * 100) : 0;
-    return { accuracy, isPassed: accuracy >= 65, wordDiffHtml };
-  }
-
-  window.testVoiceMic = function(targetSentence, toastId, onSuccessCallback = null) {
-    const toast = document.getElementById(toastId);
-    const pron = getPronoun();
-    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRec) {
-      speakText(targetSentence);
-      if (toast) toast.innerHTML = `🎙️ Trình duyệt không hỗ trợ Mic. ${pron} hãy đọc to: <b>"${targetSentence}"</b> rồi bấm Xác nhận nhé!`;
-      return;
-    }
-    const rec = new SpeechRec();
-    rec.lang = 'en-US';
-    rec.interimResults = false;
-    if (toast) toast.innerHTML = `🎙️ Đang lắng nghe... ${pron} hãy đọc to và rõ cả câu tiếng Anh nhé!`;
-    rec.onresult = e => {
-      const heard = e.results[0][0].transcript.trim();
-      const evalRes = evaluateSpeechAccuracy(targetSentence, heard);
-
-      if (evalRes.isPassed) {
-        playSFX('ok');
-        stars += 3;
-        localStorage.setItem('s1_g1_stars', stars);
-        syncSidebarUI();
-        if (toast) {
-          toast.innerHTML = `
-            <div>🎉 Phát âm đạt <b>${evalRes.accuracy}%</b> (+3 Sao ⭐) — Máy nghe: <i>"${heard}"</i></div>
-            <div style="font-size:17px;">So khớp từng từ: ${evalRes.wordDiffHtml}</div>
-          `;
-        }
-        if (onSuccessCallback) setTimeout(() => onSuccessCallback(), 1100);
-      } else {
-        playSFX('err');
-        speakText(targetSentence);
-        if (toast) {
-          toast.innerHTML = `
-            <div style="color:#b91c1c;">⚠️ Độ chính xác <b>${evalRes.accuracy}%</b> (Cần ≥ 65%). Máy nghe được: <i>"${heard}"</i></div>
-            <div style="font-size:17px;">Chữ màu đỏ là từ cần phát âm rõ hơn: ${evalRes.wordDiffHtml}</div>
-          `;
-        }
+        if (toast) toast.innerHTML = `❌ Chưa đúng chữ cái đó! Nếu quên con có thể bấm nút "💡 Gợi ý 1 chữ cái" bên trái nhé!`;
       }
     };
-    rec.onerror = () => {
-      speakText(targetSentence);
-      if (toast) toast.innerHTML = `💡 Không nhận diện được âm thanh. ${pron} hãy bấm lại Mic và đọc to <b>"${targetSentence}"</b> nhé!`;
-    };
-    rec.start();
-  };
 
-  /* =========================================================================
-     8. PHA 5: TƯƠNG TÁC ĐỜI THỰC (THÍCH ỨNG THEO CẤP ĐỘ)
-     ========================================================================= */
-  function renderP5_ParentMission(ws, les) {
-    const gm = les.parentGame;
-    ws.innerHTML = `
-      <div class="banner-box" style="background:#fef3c7;border-color:#f59e0b;">
-        <div class="banner-title-wrap">
-          <h2 style="color:#b45309;">🎲 Pha 5: ${isUpperStage() ? 'Thực Hành Giao Tiếp & Phản Xạ Đời Thực' : 'Tương Tác Đời Thực Cùng Bố Mẹ'}</h2>
-          <p>Rời màn hình 10–12 phút và ứng dụng trực tiếp các cấu trúc vừa học vào ngữ cảnh sống!</p>
-        </div>
-        <button class="hero-audio-btn" style="background:#7c3aed;" onclick="selectPhase('p6')">🏆 Vào Thi 4 Kỹ Năng</button>
-      </div>
-      <div class="right-stage" style="flex:1;">
-        <div class="mission-card">
-          <h3>${gm.title}</h3>
-          ${gm.steps.map(s => `<div class="mission-step">${s}</div>`).join('')}
-          <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
-            ${les.chunks.map(c => `
-              <button class="preview-sound-btn" style="width:auto;padding:10px 16px;font-size:18px;flex-direction:row;gap:8px;"
-                      onclick="speakText('${escAttr(c.full)}')">
-                🔊 ${c.scene} "${c.full}"
-              </button>
-            `).join('')}
-          </div>
-          <div style="margin-top:20px;text-align:center;">
-            <button class="hero-audio-btn" style="background:#16a34a;font-size:21px;padding:14px 28px;" onclick="rewardParentMission()">
-              🏆 Đã Hoàn Thành Thực Hành Đời Thực (+10 Sao ⭐)
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  window.rewardParentMission = function() {
-    playSFX('ok');
-    stars += 10;
-    localStorage.setItem('s1_g1_stars', stars);
-    syncSidebarUI();
-    speakText('Awesome job! High five!');
-  };
-
-  /* =========================================================================
-     9. PHA 6: PHÒNG THI TOÀN DIỆN 4 KỸ NĂNG (SỬA REGEX \b & DISTRACTORS ĐỘNG)
-     ========================================================================= */
-  let examScope = 'lesson';
-  let examQuestions = [];
-  let examCurIdx = 0;
-  let examTypedCount = 0;
-  let examHintUsed = false;
-  let examScores = { listen: 0, read: 0, write: 0, speak: 0, totalEach: 2 };
-
-  function buildExamQuestions(scope) {
-    examScope = scope;
-    const modLessons = getModuleLessons();
-    const sourceLessons = scope === 'lesson' ? [getLesson()] : modLessons;
-    const allChunks = [];
-    sourceLessons.forEach(l => {
-      l.chunks.forEach(ch => allChunks.push({ ...ch, lesId: l.id }));
-    });
-
-    const countPerSkill = scope === 'lesson' ? 2 : 3;
-    examScores = { listen: 0, read: 0, write: 0, speak: 0, totalEach: countPerSkill };
-    examQuestions = [];
-
-    const pickRandom = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
-
-    // 1. Kỹ năng NGHE (Listening)
-    pickRandom(allChunks, countPerSkill).forEach(item => {
-      const others = pickRandom(allChunks.filter(x => x.full !== item.full), 2);
-      const opts = [...others.map(o => ({ scene: o.scene, full: o.full })), { scene: item.scene, full: item.full }]
-        .sort(() => Math.random() - 0.5);
-      examQuestions.push({ skill: 'listen', target: item, opts });
-    });
-
-    // 2. Kỹ năng ĐỌC HIỂU MẶT CHỮ (Reading)
-    pickRandom(allChunks, countPerSkill).forEach(item => {
-      const others = pickRandom(allChunks.filter(x => x.full !== item.full), 2);
-      const opts = [...others.map(o => o.full), item.full].sort(() => Math.random() - 0.5);
-      examQuestions.push({ skill: 'read', target: item, opts });
-    });
-
-    // 3. Kỹ năng VIẾT BÀN PHÍM KHÔNG GỢI Ý (Writing)
-    pickRandom(allChunks, countPerSkill).forEach(item => {
-      examQuestions.push({ skill: 'write', target: item });
-    });
-
-    // 4. Kỹ năng NÓI PHẢN XẠ (Speaking)
-    pickRandom(allChunks, countPerSkill).forEach(item => {
-      examQuestions.push({ skill: 'speak', target: item });
-    });
-
-    examCurIdx = 0;
-    examTypedCount = 0;
-    examHintUsed = false;
-  }
-
-  window.switchExamScope = function(scope) {
-    buildExamQuestions(scope);
-    playSFX('tap');
-    renderWorkspace();
-  };
-
-  function renderP6_ComprehensiveExam(ws, les) {
-    if (examQuestions.length === 0) buildExamQuestions(examScope);
-    const pron = getPronoun();
-
-    if (examCurIdx >= examQuestions.length) {
-      const maxPerSkill = examScores.totalEach;
-      const totalRight = examScores.listen + examScores.read + examScores.write + examScores.speak;
-      const totalMax = maxPerSkill * 4;
-      const pct = Math.round((totalRight / totalMax) * 100);
-
-      ws.innerHTML = `
-        <div class="right-stage" style="flex:1;">
-          <div style="font-size:90px;">${pct >= 80 ? '🏆🌟' : '🎖️👍'}</div>
-          <h2 style="font-size:36px;margin:6px 0;color:#1e3a8a;">
-            KẾT QUẢ THI TOÀN DIỆN 4 KỸ NĂNG: ${pct}/100 ĐIỂM
-          </h2>
-          <p style="font-size:19px;color:#475569;margin:0;">
-            Phạm vi: <b>${examScope === 'lesson' ? les.name : `Toàn bộ Module ${curMod} (3 Bài A+B+C)`}</b>
-          </p>
-
-          <div class="exam-score-grid">
-            <div class="score-card">
-              <h4>🎧 1. NGHE HIỂU</h4>
-              <b>${examScores.listen}/${maxPerSkill}</b>
-            </div>
-            <div class="score-card">
-              <h4>📖 2. ĐỌC MẶT CHỮ</h4>
-              <b>${examScores.read}/${maxPerSkill}</b>
-            </div>
-            <div class="score-card">
-              <h4>⌨️ 3. VIẾT CHÍNH TẢ</h4>
-              <b>${examScores.write}/${maxPerSkill}</b>
-            </div>
-            <div class="score-card">
-              <h4>🎙️ 4. NÓI PHẢN XẠ</h4>
-              <b>${examScores.speak}/${maxPerSkill}</b>
-            </div>
-          </div>
-
-          <div style="display:flex;gap:14px;">
-            <button class="hero-audio-btn" onclick="switchExamScope('lesson')">
-              🔄 Thi Lại Bài Này (8 Câu)
-            </button>
-            <button class="hero-audio-btn" style="background:#7c3aed;" onclick="switchExamScope('module')">
-              🏆 Thi Vượt Ải Cả Module ${curMod} (12 Câu)
-            </button>
-          </div>
-        </div>
-      `;
-      return;
-    }
-
-    const q = examQuestions[examCurIdx];
-    const skillMeta = {
-      listen: { name: '🎧 KỸ NĂNG 1: NGHE HIỂU (ẨN CHỮ - CHỈ NGHE TAI)', bg: '#0284c7' },
-      read:   { name: '📖 KỸ NĂNG 2: ĐỌC MẶT CHỮ (KHÔNG NGHE THỬ - TỰ ĐỌC)', bg: '#16a34a' },
-      write:  { name: '⌨️ KỸ NĂNG 3: VIẾT CHÍNH TẢ (TỰ NHỚ CHỮ GÕ PHÍM)', bg: '#d97706' },
-      speak:  { name: '🎙️ KỸ NĂNG 4: NÓI PHẢN XẠ (NHÌN TRANH TỰ NÓI CẢ CÂU)', bg: '#7c3aed' }
-    }[q.skill];
-
-    let leftHtml = '';
-    let rightHtml = '';
-
-    if (q.skill === 'listen') {
-      leftHtml = `
-        <h3 style="margin:0;color:#1e3a8a;font-size:22px;">👈 Chọn bức tranh đúng với câu vừa nghe:</h3>
-        ${q.opts.map((opt, idx) => `
-          <button class="pick-chunk-btn" id="exOpt_${idx}" style="font-size:38px;justify-content:center;padding:18px;"
-                  onclick="submitExamChoice('${escAttr(opt.full)}', this)">
-            <b style="font-size:24px;color:#2563eb;margin-right:16px;">[${idx+1}]</b> ${opt.scene}
-          </button>
-        `).join('')}
-      `;
-      rightHtml = `
-        <span class="exam-skill-pill" style="background:${skillMeta.bg};">${skillMeta.name}</span>
-        <div style="font-size:110px;margin:16px 0;">🎧❓</div>
-        <button class="hero-audio-btn" style="font-size:24px;padding:18px 34px;" onclick="speakText('${escAttr(q.target.full)}')">
-          🔊 Bấm Nghe Câu Tiếng Anh (Phím Space)
-        </button>
-        <div class="toast-box" id="examToast">👂 Không có chữ gợi ý! ${pron} hãy nghe kỹ và chọn tranh bên trái!</div>
-      `;
-      setTimeout(() => speakText(q.target.full), 200);
-    } else if (q.skill === 'read') {
-      leftHtml = `
-        <h3 style="margin:0;color:#15803d;font-size:22px;">👈 Tự đọc bằng mắt và chọn câu đúng:</h3>
-        ${q.opts.map((txt, idx) => `
-          <button class="pick-chunk-btn" id="exOpt_${idx}" style="font-size:24px;padding:18px;"
-                  onclick="submitExamChoice('${escAttr(txt)}', this)">
-            <span><b style="color:#16a34a;">[${idx+1}]</b> ${txt}</span>
-          </button>
-        `).join('')}
-      `;
-      rightHtml = `
-        <span class="exam-skill-pill" style="background:${skillMeta.bg};">${skillMeta.name}</span>
-        <div style="font-size:125px;margin:14px 0;">${q.target.scene}</div>
-        <div class="toast-box" id="examToast">👀 Đã tắt loa nghe thử! ${pron} hãy tự đọc 3 câu bên trái và chọn câu khớp với tranh!</div>
-      `;
-    } else if (q.skill === 'write') {
-      const word = q.target.traceWord.toLowerCase();
-      const chars = word.split('');
-      // Dùng Word Boundary \b để không cắt nhầm vào giữa từ khác
-      const escapedWord = q.target.traceWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const maskedSentence = q.target.full.replace(new RegExp('\\b' + escapedWord + '\\b', 'i'), '______');
-
-      leftHtml = `
-        <h3 style="margin:0;color:#b45309;font-size:22px;">👈 Trợ giúp Thi Viết:</h3>
-        <button class="pick-chunk-btn" onclick="speakText('${escAttr(q.target.traceWord)}')">
-          <span>🔊 1. Nghe Lại Từ Cần Viết</span>
-        </button>
-        <button class="pick-chunk-btn" onclick="speakText('${escAttr(q.target.full)}')">
-          <span>🔊 2. Nghe Cả Câu Đầy Đủ</span>
-        </button>
-        <button class="pick-chunk-btn" style="background:#fef3c7;border-color:#f59e0b;color:#b45309;" onclick="revealOneExamLetter()">
-          <span>💡 3. Gợi Ý 1 Chữ Cái Tiếp Theo</span>
-        </button>
-      `;
-      rightHtml = `
-        <span class="exam-skill-pill" style="background:${skillMeta.bg};">${skillMeta.name}</span>
-        <div style="font-size:86px;line-height:1;">${q.target.scene}</div>
-        <div style="font-size:28px;font-weight:900;color:#1e3a8a;margin:6px 0;">
-          Điền từ vào câu: "${maskedSentence}"
-        </div>
-        <div class="letter-slots-row">
-          ${chars.map((ch, idx) => {
-            const isTyped = idx < examTypedCount;
-            return `
-              <div class="key-slot ${isTyped ? 'typed-ok' : 'blind-slot'} ${idx === examTypedCount ? 'current-target' : ''}" id="exSlot_${idx}">
-                ${isTyped ? ch : '_'}
-              </div>
-            `;
-          }).join('')}
-        </div>
-        <div class="onscreen-keyboard">
-          ${KB_ROWS.map(row => `
-            <div class="kb-row">
-              ${row.map(k => `
-                <button class="kb-key ${examHintUsed && k === chars[examTypedCount] ? 'highlight-hint' : ''}"
-                        onclick="handleExamWriteKey('${k}')">
-                  ${k}
-                </button>
-              `).join('')}
-            </div>
-          `).join('')}
-        </div>
-        <div class="toast-box" id="examToast">⌨️ Tự nhớ mặt chữ và gõ từ khóa (${word.length} chữ cái) trên bàn phím!</div>
-      `;
-      if (examTypedCount === 0 && !examHintUsed) {
-        setTimeout(() => speakText(q.target.traceWord), 200);
-      }
-    } else if (q.skill === 'speak') {
-      leftHtml = `
-        <h3 style="margin:0;color:#6b21a8;font-size:22px;">👈 Kiểm tra Nói Phản Xạ:</h3>
-        <button class="pick-chunk-btn" style="background:#faf5ff;border-color:#9333ea;color:#6b21a8;"
-                onclick="testVoiceMic('${escAttr(q.target.full)}', 'examToast', () => passSpeakingExam(true))">
-          <span>🎙️ 1. Bấm Mic Nói To Cả Câu (Chấm Tự Động)</span>
-        </button>
-        <button class="pick-chunk-btn" onclick="speakText('${escAttr(q.target.full)}')">
-          <span>🔊 2. Nghe Đáp Án Mẫu Để Kiểm Chứng</span>
-        </button>
-        <button class="hero-audio-btn" style="background:#16a34a;justify-content:center;padding:16px;"
-                onclick="passSpeakingExam(true)">
-          ✅ Đã Nói Trôi Chảy (Đạt Điểm)
-        </button>
-        <button class="pick-chunk-btn" style="background:#fee2e2;color:#b91c1c;justify-content:center;"
-                onclick="passSpeakingExam(false)">
-          ❌ Còn Quên Câu (Đưa Vào Hộp Ôn)
-        </button>
-      `;
-      rightHtml = `
-        <span class="exam-skill-pill" style="background:${skillMeta.bg};">${skillMeta.name}</span>
-        <div style="font-size:125px;margin:14px 0;">${q.target.scene}</div>
-        <h2 style="font-size:34px;color:#6b21a8;margin:8px 0;">
-          🎤 Nhìn tranh và nói to cả câu tiếng Anh!
-        </h2>
-        <div class="toast-box" id="examToast" style="flex-direction:column;gap:4px;">
-          👉 ${pron} tự nói to câu mô tả bức tranh trên (không nhìn chữ), hệ thống sẽ chấm khớp từng từ!
-        </div>
-      `;
-    }
-
-    ws.innerHTML = `
-      <div class="banner-box" style="background:#faf5ff;border-color:#d8b4fe;">
-        <div class="banner-title-wrap">
-          <h2 style="color:#6b21a8;">🏆 Trạm Kiểm Tra 4 Kỹ Năng (Câu ${examCurIdx + 1}/${examQuestions.length})</h2>
-          <p>Đánh giá thực chất Nghe – Đọc – Viết – Nói không có gợi ý</p>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <button class="lesson-pill ${examScope==='lesson'?'active':''}" onclick="switchExamScope('lesson')">
-            📝 Thi Bài Hiện Tại (8 câu)
-          </button>
-          <button class="lesson-pill ${examScope==='module'?'active':''}" onclick="switchExamScope('module')">
-            🏅 Thi Cả Module ${curMod} (12 câu)
-          </button>
-        </div>
-      </div>
-      <div class="ergo-split">
-        <div class="left-deck">${leftHtml}</div>
-        <div class="right-stage">${rightHtml}</div>
-      </div>
-    `;
-  }
-
-  window.submitExamChoice = function(chosen, btnEl) {
-    const q = examQuestions[examCurIdx];
-    const toast = document.getElementById('examToast');
-    const isOk = chosen === q.target.full;
-
-    if (isOk) {
-      btnEl.classList.add('correct');
-      playSFX('ok');
-      speakText(q.target.full);
-      examScores[q.skill] += 1;
-      stars += 4;
-      localStorage.setItem('s1_g1_stars', stars);
-      syncSidebarUI();
-      toast.innerHTML = `🎉 Chính xác! <b>"${q.target.full}"</b> (+4 Sao ⭐)`;
-    } else {
-      btnEl.classList.add('wrong');
-      playSFX('err');
-      recordResult(false, {
-        id: `exam_${q.target.lesId}_${q.target.traceWord}`,
-        mod: q.target.lesId,
-        scene: q.target.scene,
-        prompt: `Ôn lại câu của tranh ${q.target.scene}:`,
-        word: q.target.full,
-        answer: q.target.full,
-        options: getDynamicSentenceOptions(q.target, 3)
-      });
-      toast.innerHTML = `❌ Chưa đúng! Đáp án là: <b>"${q.target.full}"</b> (Đã lưu vào Hộp 1 để ôn lại)`;
-    }
-
-    setTimeout(() => {
-      examCurIdx++;
-      renderWorkspace();
-    }, 1250);
-  };
-
-  window.revealOneExamLetter = function() {
-    examHintUsed = true;
-    playSFX('tap');
-    renderWorkspace();
-  };
-
-  window.handleExamWriteKey = function(pressedKey) {
-    const q = examQuestions[examCurIdx];
-    if (!q || q.skill !== 'write') return;
-    const word = q.target.traceWord.toLowerCase();
-    if (examTypedCount >= word.length) return;
-
-    const expected = word[examTypedCount];
-    const slotEl = document.getElementById(`exSlot_${examTypedCount}`);
-    const toast = document.getElementById('examToast');
-
-    if (pressedKey.toLowerCase() === expected) {
-      playSFX('key');
-      examTypedCount++;
-      examHintUsed = false;
-      renderWorkspace();
-
-      if (examTypedCount === word.length) {
+    window.passSpeakingExam = function(isPassed) {
+      const q = examQuestions[examCurIdx];
+      if (isPassed) {
         playSFX('ok');
-        examScores.write += 1;
+        examScores.speak += 1;
         stars += 5;
-        localStorage.setItem('s1_g1_stars', stars);
+        CS.setStars(stars);
         syncSidebarUI();
-        speakText(`${word}! ${q.target.full}`);
-        const t = document.getElementById('examToast');
-        if (t) t.innerHTML = `🎉 Viết chính tả chuẩn xác: <b>"${word.toUpperCase()}"</b> (+5 Sao ⭐)!`;
-        setTimeout(() => {
-          examTypedCount = 0;
-          examCurIdx++;
-          renderWorkspace();
-        }, 1250);
+        speakText(q.target.full);
+      } else {
+        recordResult(false, {
+          id: `exam_spk_${q.target.lesId}_${q.target.traceWord}`,
+          mod: q.target.lesId,
+          scene: q.target.scene,
+          prompt: `Nói câu mô tả tranh ${q.target.scene}:`,
+          word: q.target.full,
+          answer: q.target.full,
+          options: [{ txt: q.target.full, ico: q.target.scene }, { txt: 'I am hungry', ico: '🍔' }]
+        });
       }
-    } else {
-      playSFX('err');
-      if (slotEl) {
-        slotEl.classList.add('wrong-key');
-        setTimeout(() => slotEl.classList.remove('wrong-key'), 350);
-      }
-      if (toast) toast.innerHTML = `❌ Chưa đúng chữ cái đó! Nếu quên có thể bấm nút "💡 Gợi ý 1 chữ cái" bên trái nhé!`;
-    }
-  };
-
-  window.passSpeakingExam = function(isPassed) {
-    const q = examQuestions[examCurIdx];
-    if (isPassed) {
-      playSFX('ok');
-      examScores.speak += 1;
-      stars += 5;
-      localStorage.setItem('s1_g1_stars', stars);
-      syncSidebarUI();
-      speakText(q.target.full);
-    } else {
-      recordResult(false, {
-        id: `exam_spk_${q.target.lesId}_${q.target.traceWord}`,
-        mod: q.target.lesId,
-        scene: q.target.scene,
-        prompt: `Nói câu mô tả tranh ${q.target.scene}:`,
-        word: q.target.full,
-        answer: q.target.full,
-        options: getDynamicSentenceOptions(q.target, 3)
-      });
-    }
-    setTimeout(() => {
-      examCurIdx++;
-      renderWorkspace();
-    }, 850);
-  };
-
+      setTimeout(() => {
+        examCurIdx++;
+        renderWorkspace();
+      }, 850);
+    };
 
     /* =========================================================================
        10. PHÒNG ÔN TẬP LEITNER 3 HỘP
@@ -2299,8 +2110,8 @@
         speakText(item.word);
         item.box += 1;
         stars += 4;
-        localStorage.setItem('s1_g1_stars', stars);
-        localStorage.setItem('s1_g1_leitner', JSON.stringify(leitnerDB));
+        CS.setStars(stars);
+        CS.setLeitner(leitnerDB);
         syncSidebarUI();
         toast.innerHTML = `🎉 Giỏi lắm! Đã chuyển lên <b>Hộp ${item.box}</b>!`;
         setTimeout(() => renderWorkspace(), 950);
@@ -2308,7 +2119,7 @@
         item.box = 1;
         btnEl.classList.add('wrong');
         playSFX('err');
-        localStorage.setItem('s1_g1_leitner', JSON.stringify(leitnerDB));
+        CS.setLeitner(leitnerDB);
         syncSidebarUI();
         toast.innerHTML = `❌ Chưa đúng rồi! Con bấm nút 🔊 nghe thử từng câu nhé!`;
       }
@@ -2357,7 +2168,46 @@
       updateHeader();
       renderWorkspace();
     });
-
   </script>
+
+  <!-- Anki từ vựng lũy kế (SM-2, 3 loại thẻ): dữ liệu từ + cấu hình + engine dùng chung (docs/anki/anki_engine.js); thiếu file thì bỏ qua -->
+  <script src="data/anki_words.js"></script>
+  <script>
+    window.ANKI_CONFIG = {
+      app: 'kids-anki', prefix: 'kids_anki_', dataName: 'KIDS_ANKI_WORDS', globalName: 'KIDS_ANKI',
+      voiceLangs: ['en-US', 'en-GB'], wordLang: 'en', defLang: 'en', wordClass: 'en', exportName: 'anki-tieng-anh-thieu-nhi', falseFriends: false,
+      typePlaceholder: 'Gõ từ tiếng Anh rồi Enter', typedLabel: 'chính tả',
+      kidTone: function (level) { return level <= 3; },
+      strings: {
+        kid: { hearTitle: 'Nghe và chọn từ đúng nhé!', typeHint: 'Con gõ từ rồi bấm Enter', showBack: 'Lật thẻ (Space)' },
+        adult: { hearTitle: 'Nghe và chọn đúng từ', typeHint: 'Gõ từ rồi Enter', showBack: 'Xem mặt sau (Space)' }
+      },
+      map: function (w) {
+        return { id: w.id, lesson: w.lesson, level: w.level, text: w.word, read: w.ipa, hv: '', pos: w.pos, vi: w.vi, def: w.def || '', ico: w.ico,
+                 forms: w.forms, ex: w.ex ? { t: w.ex.en, read: '', vi: w.ex.vi || '' } : null, cloze: w.cloze, dis: w.dis || [] };
+      }
+    };
+  </script>
+  <script src="data/anki_engine.js"></script>
+  <script>try { if (typeof ankiMarkOpened === 'function') ankiMarkOpened(); } catch (e) {}</script>
+  <script>
+    /* Khai báo cho data/app_kit.js (bộ tiện ích dùng chung, xem docs/upgrade/app_kit.js) */
+    window.APPKIT_ADAPTER = {
+      phases: [
+        { id: 'p1', name: 'Nghe & Ngữ pháp', mins: 4 }, { id: 'p2', name: 'Ghép tàu 3 toa', mins: 4 }, { id: 'p3', name: 'Hỏi đáp tranh', mins: 3 },
+        { id: 'p4', name: 'Gõ phím & Mic', mins: 4 }, { id: 'p5', name: 'Chơi cùng bố mẹ', mins: 4 }, { id: 'p6', name: 'Thi 4 kỹ năng', mins: 4 }
+      ],
+      tip: function () { var l = getLesson(), g = l && l.grammar; return g ? { tip: g.tip || '', vn: g.vn_tip || '' } : null; },
+      current: function () { var l = getLesson(); return { stage: curStage, mod: curMod, idx: curLesIdx, phase: curPhase, lessonId: l && l.id, lessonName: l && l.name }; },
+      go: function (stage, mod, idx, phase) {
+        if (stage !== curStage) switchStage(stage);
+        if (mod !== curMod) selectModule(mod);
+        if (idx !== curLesIdx) selectLesson(idx);
+        if (phase && phase !== curPhase) selectPhase(phase);
+      }
+    };
+  </script>
+  <script src="data/app_kit.js"></script>
+  <script src="data/app_shell.js"></script>
 </body>
 </html>
