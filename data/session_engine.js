@@ -4,6 +4,7 @@
    - Chặng ≤ 12 bước: (1) thẻ mẹo nếu là đầu bài mới; (2–5) TỐI ĐA 4 thẻ ôn đến hạn (interval thấp nhất trước, không bao giờ hiện tổng nợ); (6–12) 7 bước bài mới.
    - Một bài mới được chia thành nhiều chặng (mỗi chặng 7 bước bài mới) theo kế hoạch cố định `lessonPlan`.
    - Làm SAI lần đầu: ghi SM-2 MỘT lần (grade 1) và đưa bước xuống cuối hàng đợi của chặng; các lần sau của bước đó không ghi SM-2 nữa.
+   - Bước phụ (đợt 2, khóa tiếng Trung): tối đa 3 bước `extra:true` ngoài 12 bước chính — `warm` (khởi động ≤ 30 giây, đầu chặng) và `blind` (≤ 2 bước phản xạ, cuối chặng). Bước phụ KHÔNG chấm (không tính độ chính xác, không ghi SM-2, không xuống cuối hàng đợi).
    - Chuỗi ngày "dễ tha thứ": trong bất kỳ 7 ngày nào được nghỉ tối đa 2 ngày mà không mất chuỗi. */
 (function (root, factory) {
   var api = factory();
@@ -12,7 +13,7 @@
 })(typeof window !== 'undefined' ? window : this, function () {
   'use strict';
   var DAY = 86400000;
-  var LIMITS = { reviews: 4, newSteps: 7, quick: 5, parentSegments: 6, maxMissedIn7: 2 };
+  var LIMITS = { reviews: 4, newSteps: 7, quick: 5, parentSegments: 6, maxMissedIn7: 2, extras: 3 };
 
   /* ---------- ngày & chuỗi ---------- */
   function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -84,9 +85,11 @@
     var segs = segmentCount(o.plan.length), newDone = o.replay ? 0 : (o.newDone || 0);
     var seg = Math.min(segs, Math.floor(newDone / LIMITS.newSteps) + 1), from = (seg - 1) * LIMITS.newSteps, to = Math.min(o.plan.length, from + LIMITS.newSteps);
     var steps = [];
+    if (o.warm) steps.push(Object.assign({}, o.warm, { kind: 'warm', extra: true }));
     if (o.tipNeeded && o.hasTip && seg === 1) steps.push({ kind: 'tip' });
     (o.dueKeys || []).slice(0, LIMITS.reviews).forEach(function (k) { steps.push({ kind: 'review', key: k }); });
     for (var i = from; i < to; i++) steps.push(Object.assign({}, o.plan[i], { kind: 'new', pi: i }));
+    (o.blind || []).slice(0, LIMITS.extras - (o.warm ? 1 : 0)).forEach(function (b) { steps.push(Object.assign({}, b, { kind: 'blind', extra: true })); });
     return { steps: steps, seg: seg, segs: segs, newFrom: from, newTo: to };
   }
   function buildQuick(keys) { return { steps: keys.map(function (k) { return { kind: 'review', key: k }; }), seg: 1, segs: 1, newFrom: 0, newTo: 0 }; }
@@ -100,6 +103,7 @@
   /* ghi kết quả một lần trả lời. Trả {session, firstTry, srs: {key, ok}|null}. Sai → bước xuống cuối hàng; đúng → sang bước kế. */
   function answer(s, ok, info) {
     var n = JSON.parse(JSON.stringify(s)), c = current(n); if (!c) return { session: n, firstTry: false, srs: null };
+    if (c.step.extra) { n.results[c.idx] = { ok: !!ok, ms: info && info.ms !== undefined ? info.ms : null, extra: true }; n.pos++; return { session: n, firstTry: false, srs: null }; }   // bước phụ: không chấm, không xuống cuối hàng
     var first = !n.results[c.idx]; n.attempts++;
     var srs = null;
     if (first) { n.firstTry++; if (ok) n.firstOk++; n.results[c.idx] = { ok: !!ok, ms: info && info.ms !== undefined ? info.ms : null }; if (c.step.kind === 'review') srs = { key: c.step.key, ok: !!ok, ms: n.results[c.idx].ms }; }

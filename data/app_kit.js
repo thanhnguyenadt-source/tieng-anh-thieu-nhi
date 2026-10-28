@@ -740,7 +740,61 @@
     if (!wordIdx) { wordIdx = {}; A.words().forEach(function (w) { var k = String(w.text).toLowerCase(); if (!wordIdx[k]) wordIdx[k] = w; (w.forms || []).forEach(function (f) { var kk = String(f).toLowerCase(); if (!wordIdx[kk]) wordIdx[kk] = w; }); }); }
     return wordIdx[String(text).toLowerCase()] || null;
   }
+  function ankiWordIn(text, lessonId) {                  // mục từ của đúng bài (từ nhiều nghĩa như wake: danh từ/động từ); không có thì lấy mục đầu
+    var A = root.ANKI, ws = A && A.words ? A.words() : [], k = String(text).toLowerCase(), i;
+    for (i = 0; i < ws.length; i++) if (ws[i].lesson === lessonId && (String(ws[i].text).toLowerCase() === k || (ws[i].forms || []).some(function (f) { return String(f).toLowerCase() === k; }))) return ws[i];
+    return ankiWord(text);
+  }
   function closeBubble() { if (bubble) { bubble.remove(); bubble = null; } }
+  /* ---- họ hàng âm Hán Việt (zh): dữ liệu window.ZH_HV_FAMILY (script đo từ HSK 1–5); chỉ hiện từ đến cấp đang học; quy luật là XU HƯỚNG ---- */
+  var PY_INI = ['zh', 'ch', 'sh', 'b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'z', 'c', 's', 'r', 'y', 'w'];
+  var VI_INI = ['ngh', 'ng', 'nh', 'ph', 'th', 'tr', 'kh', 'gh', 'gi', 'qu', 'ch', 'b', 'c', 'd', 'đ', 'g', 'h', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'x'];
+  function viSplit(syl) {
+    var s = String(syl || '').toLowerCase().normalize('NFD').replace(/[\u0300\u0301\u0309\u0303\u0323]/g, '').normalize('NFC');
+    for (var i = 0; i < VI_INI.length; i++) if (s.indexOf(VI_INI[i]) === 0 && s.length > VI_INI[i].length) return [VI_INI[i], s.slice(VI_INI[i].length)];
+    return ['∅', s];
+  }
+  function pySplit(syl) {
+    var s = String(syl || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, function (m) { return m === '\u0308' ? m : ''; }).normalize('NFC').replace(/[^a-z\u00fc]/g, '');
+    for (var i = 0; i < PY_INI.length; i++) if (s.indexOf(PY_INI[i]) === 0 && s.length > PY_INI[i].length) return [PY_INI[i], s.slice(PY_INI[i].length)];
+    return ['∅', s];
+  }
+  /* gia đình từ (kids, GĐ 4–6): tối đa 3 từ cùng gốc ĐÃ CÓ trong khóa đến cấp đang học; dữ liệu window.KIDS_WORD_FAMILY sinh từ danh sách từ */
+  function kidsFamilyHtml(text, w) {
+    var F = root.KIDS_WORD_FAMILY; if (!F) return '';
+    var pos = CS.position() || {}, stage = pos.stage || 1; if (stage < 4) return '';
+    var cands = w ? [w] : String(text).split(/[^A-Za-z']+/).filter(Boolean).map(function (t) { return ankiWord(t); }).filter(Boolean);       // cụm nhiều từ: lần lượt thử từng từ trong cụm
+    for (var i = 0; i < cands.length; i++) {
+      var cap = Math.max(stage, cands[i].level || 1), list = (F.words[String(cands[i].text).toLowerCase()] || []).filter(function (r) { return r[3] <= cap; }).slice(0, 3);
+      if (list.length) return '<div class="kit-b-f">🔗 Cùng gia đình với <b>' + esc(cands[i].text) + '</b>: ' + list.map(function (r) { return '<b>' + esc(r[0]) + '</b> (' + esc(r[1]) + ') – ' + esc(r[2]); }).join(' · ') + '</div>';
+    }
+    return '';
+  }
+  function hvFamilyHtml(text, w) {
+    if (CFG.course === 'kids') return kidsFamilyHtml(text, w);
+    var F = root.ZH_HV_FAMILY; if (!F || CFG.course !== 'zh' || !w) return '';
+    var pos = CS.position() || {}, cap = Math.max(pos.stage || 1, w.level || 1), chars = String(text).split(''), hvs = String(w.hv || '').split(/\s+/), out = '', k;
+    for (k = 0; k < chars.length; k++) {
+      var list = F.chars[chars[k]]; if (!list) continue;
+      var rel = list.filter(function (x) { return x[0] !== text && x[3] <= cap; }).slice(0, 3);
+      if (!rel.length) continue;
+      out += '<div class="kit-b-f">🔗 Họ hàng âm Hán Việt của <b>' + esc(chars[k]) + '</b>' + (hvs.length === chars.length && hvs[k] ? ' (' + esc(hvs[k]) + ')' : '') + ': ' + rel.map(function (x) { return esc(x[0]) + ' ' + esc(x[1]) + ' – ' + esc(x[2]); }).join(' · ') + '</div>';
+      break;
+    }
+    var sy = root.ZH_SANDHI ? root.ZH_SANDHI.split(w.read || '') : [];
+    if (hvs.length === chars.length && sy.length === chars.length) {
+      var best = null;
+      for (k = 0; k < chars.length; k++) {
+        var vs = viSplit(hvs[k]), ps = pySplit(sy[k].t);
+        (F.rules || []).forEach(function (r) {
+          if (r.n < 20 || r.hv === '∅' || (r.py.length === 1 && r.py[0] === r.hv)) return;      // bỏ quy luật tầm thường (m→m, l→l…)
+          if ((r.kind === 'ini' ? vs[0] : vs[1]) === r.hv && r.py.indexOf(r.kind === 'ini' ? ps[0] : ps[1]) >= 0 && (!best || r.n > best.r.n)) best = { r: r, c: chars[k], hv: hvs[k] };
+        });
+      }
+      if (best) out += '<div class="kit-b-f kit-b-rl">💡 Ở chữ <b>' + esc(best.c) + '</b> (' + esc(best.hv) + '): ' + (best.r.kind === 'ini' ? 'phụ âm đầu <b>' + esc(best.r.hv) + '</b>' : 'vần <b>-' + esc(best.r.hv) + '</b>') + ' Hán Việt thường ứng với <b>' + (best.r.kind === 'ini' ? '' : '-') + esc(best.r.py.join(' / ' + (best.r.kind === 'ini' ? '' : '-'))) + '</b> trong pinyin (đúng ~' + Math.round(best.r.share * 100) + '% ở HSK 1–5; có ngoại lệ).</div>';
+    }
+    return out;
+  }
   function showBubble(pill, text) {
     closeBubble();
     var w = ankiWord(text), py = $('.l-py', pill), hv = $('.l-hv', pill);
@@ -749,6 +803,7 @@
     if (read) h += '<div class="kit-b-r">' + esc(read) + (hvt && CFG.course === 'zh' ? ' · <b>' + esc(hvt) + '</b>' : '') + '</div>';
     if (w && w.pos) h += '<div class="kit-b-p">' + esc(w.pos) + '</div>';
     h += '<div class="kit-b-m">' + (w ? esc(w.vi) : 'Chưa có nghĩa riêng cho từ này — xem bản dịch cả câu.') + '</div>';
+    h += hvFamilyHtml(text, w);
     if (w) h += '<div class="kit-b-n">🔎 Đã đánh dấu "vừa tra": thẻ Anki của từ này được ưu tiên ôn.</div>';
     bubble = el('div', { class: 'kit-bubble', role: 'tooltip' }, h);
     doc.body.appendChild(bubble);
@@ -763,7 +818,7 @@
   addCSS('.kit-tip{background:#ecfeff;border:2px solid #67e8f9;border-radius:16px;padding:10px 14px;margin:0 0 10px;color:#164e63;font:600 16px/1.45 system-ui,sans-serif}.kit-tip-h{font-weight:900;margin-bottom:4px}.kit-tip ol{margin:0 0 6px 20px;padding:0}.kit-tip li{margin:2px 0}' +
     '.kit-tip-ok{min-height:44px;padding:6px 16px;border-radius:12px;border:0;background:#0891b2;color:#fff;font:800 15px system-ui,sans-serif;cursor:pointer}' +
     '.kit-slow,.kit-mic{min-width:44px;min-height:44px;margin:0 0 0 6px;border-radius:14px;border:2px solid #cbd5e1;background:#fff;font-size:20px;cursor:pointer;vertical-align:middle}.kit-mic{border-color:#fca5a5}' +
-    '.kit-bubble{position:fixed;z-index:100003;background:#fff;color:#0f172a;border:2px solid #1e3a8a;border-radius:14px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.3);font:16px/1.4 system-ui,sans-serif}.kit-b-w{font-size:24px;font-weight:900}.kit-b-r{color:#1d4ed8;font-weight:700}.kit-b-p{font-size:13px;color:#64748b}.kit-b-m{margin-top:4px;font-weight:700}.kit-b-n{margin-top:6px;font-size:13px;color:#047857}');
+    '.kit-bubble{position:fixed;z-index:100003;background:#fff;color:#0f172a;border:2px solid #1e3a8a;border-radius:14px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.3);font:16px/1.4 system-ui,sans-serif}.kit-b-w{font-size:24px;font-weight:900}.kit-b-r{color:#1d4ed8;font-weight:700}.kit-b-p{font-size:13px;color:#64748b}.kit-b-m{margin-top:4px;font-weight:700}.kit-b-n{margin-top:6px;font-size:13px;color:#047857}.kit-b-f{margin-top:6px;font-size:13px;color:#6d28d9}.kit-b-rl{color:#475569}');
   api.register(function () {
     var ws = $('#workspace'); if (!ws) return;
     if (root.MutationObserver) new root.MutationObserver(function () { decorateG(); }).observe(ws, { childList: true, subtree: true });
@@ -860,7 +915,18 @@
   /* =====================================================================
      I. NGHE LẶP KHI DI CHUYỂN (tiếng Trung) + THỐNG KÊ TRÊN MÁY
      ===================================================================== */
-  var loopEl = null, loopSt = { run: false, tok: 0, items: [], i: 0 };
+  var loopEl = null, loopSt = { run: false, tok: 0, items: [], i: 0 }, LOOP_GAP = 3000;
+  /* gợi ý nghĩa tiếng Việt cho câu tiếng Anh (kids: dữ liệu bài chưa có bản dịch câu): nghĩa ngắn của các từ nội dung trong câu, theo thứ tự xuất hiện */
+  var SKIP_POS = { det: 1, prep: 1, conj: 1, aux: 1, art: 1, article: 1 }, SKIP_W = { am: 1, is: 1, are: 1, be: 1, was: 1, were: 1, been: 1, do: 1, does: 1, did: 1, a: 1, an: 1, the: 1, to: 1, of: 1 };
+  function kidsHint(text, lessonId) {
+    var out = [], seen = {};
+    String(text).split(/[^A-Za-z']+/).filter(Boolean).forEach(function (t) {
+      if (SKIP_W[t.toLowerCase()]) return; var w = lessonId ? ankiWordIn(t, lessonId) : ankiWord(t); if (!w || seen[w.id] || !w.vi || SKIP_POS[String(w.pos || '').split('/')[0]]) return; seen[w.id] = 1;
+      out.push(String(w.vi).split(/[;,(]/)[0].trim());
+    });
+    return out.slice(0, 5).join(' · ');
+  }
+  api.kidsHint = kidsHint;
   function loopItems() {                                  // câu của bài đang học rồi các bài đã học trước đó (chỉ cấp đã nạp)
     var cur = AD.current ? AD.current() : {}, ls = allLessons(), ids = [], out = [];
     var idxOf = {}; ls.forEach(function (l, i) { idxOf[l.id] = i; });
@@ -871,7 +937,7 @@
       var f = findLesson(id); if (!f) return;
       var st = root.CURRICULUM_STAGES && root.CURRICULUM_STAGES[f.stage]; if (!st) return;
       var les = ((st.data[f.mod] || {}).lessons || [])[f.idx]; if (!les) return;
-      (les.chunks || []).forEach(function (ch) { if (ch.full) out.push({ han: ch.full, vi: ch.vi || '', lesson: id }); });
+      (les.chunks || []).forEach(function (ch) { if (ch.full) out.push({ han: ch.full, vi: ch.vi || (CFG.course === 'kids' ? kidsHint(ch.full, id) : ''), lesson: id }); });
     });
     return out.slice(0, 60);
   }
@@ -879,33 +945,32 @@
   function runLoop() {
     if (loopSt.run) return; loopSt.run = true; var tok = ++loopSt.tok;
     var viv = speechVoice('vi-VN');
-    function show() { var it = loopSt.items[loopSt.i]; if (!loopEl || !it) return; $('#kitLoopHan', loopEl).textContent = it.han; $('#kitLoopVi', loopEl).textContent = it.vi; $('#kitLoopN', loopEl).textContent = (loopSt.i + 1) + '/' + loopSt.items.length; }
+    function show(revealHan) { var it = loopSt.items[loopSt.i]; if (!loopEl || !it) return; $('#kitLoopHan', loopEl).textContent = revealHan ? it.han : '？'; $('#kitLoopVi', loopEl).textContent = it.vi; $('#kitLoopN', loopEl).textContent = (loopSt.i + 1) + '/' + loopSt.items.length; }
     (function next() {
       if (tok !== loopSt.tok || !loopSt.run) return;
       if (loopSt.i >= loopSt.items.length) loopSt.i = 0;
-      var it = loopSt.items[loopSt.i]; show();
-      speakOnce(it.han, 'zh-CN', 0.72).then(function () { return tok === loopSt.tok ? pauseMs(2000) : null; })
-        .then(function () { return tok === loopSt.tok && viv && it.vi ? speakBrowser(it.vi, 'vi-VN', 0.95) : null; })
-        .then(function () { return tok === loopSt.tok ? pauseMs(500) : null; })
-        .then(function () { return tok === loopSt.tok ? speakOnce(it.han, 'zh-CN', 0.92) : null; })
+      var it = loopSt.items[loopSt.i]; show(false);          // thứ tự mới (đợt 2): nghĩa Việt → nghỉ 3 giây để TỰ NÓI → câu Trung × 2 (lần 2 tốc độ 0,85)
+      Promise.resolve(viv && it.vi ? speakBrowser(it.vi, 'vi-VN', 0.95) : null).then(function () { return tok === loopSt.tok ? pauseMs(LOOP_GAP) : null; })
+        .then(function () { if (tok === loopSt.tok) show(true); return tok === loopSt.tok ? speakOnce(it.han, SPEECH_LANG[CFG.course] || 'zh-CN', 0.92) : null; })
+        .then(function () { return tok === loopSt.tok ? pauseMs(700) : null; })
+        .then(function () { return tok === loopSt.tok ? speakOnce(it.han, SPEECH_LANG[CFG.course] || 'zh-CN', 0.85) : null; })
         .then(function () { return tok === loopSt.tok ? pauseMs(1500) : null; })
         .then(function () { if (tok !== loopSt.tok) return; loopSt.i++; next(); });
     })();
   }
   function stopLoop() { loopSt.run = false; loopSt.tok++; stopSprite(); try { if (root.speechSynthesis) root.speechSynthesis.cancel(); } catch (e) {} }
   function openLoop() {
-    if (CFG.course !== 'zh') return;
     if (!loopEl) { loopEl = el('div', { id: 'kitLoop', class: 'kit-modal kit-top', role: 'dialog', 'aria-modal': 'true' }); doc.body.appendChild(loopEl); loopEl.onclick = function (e) { if (e.target === loopEl) { stopLoop(); loopEl.classList.remove('open'); } }; }
     loopSt.items = loopItems(); loopSt.i = 0; stopLoop();
     var hasVi = !!speechVoice('vi-VN');
-    loopEl.innerHTML = '<div class="kit-card"><h2>🎧 Nghe lặp khi di chuyển</h2><p class="kit-sub">Mỗi câu: tiếng Trung <b>chậm</b> → nghỉ 2 giây → nghĩa tiếng Việt' + (hasVi ? '' : ' <i>(máy chưa có giọng tiếng Việt nên bỏ bước này)</i>') + ' → tiếng Trung <b>tốc độ thường</b>. Giữ màn hình sáng khi nghe.</p>' +
+    loopEl.innerHTML = '<div class="kit-card"><h2>🎧 ' + (CFG.course === 'kids' ? 'Nghe rảnh tay (cho bố mẹ)' : 'Nghe lặp khi di chuyển') + '</h2><p class="kit-sub">Mỗi câu: <b>nghĩa tiếng Việt</b>' + (hasVi ? '' : ' <i>(máy chưa có giọng tiếng Việt: đọc nghĩa trên màn hình)</i>') + ' → nghỉ 3 giây để <b>tự nói</b> → tiếng ' + (CFG.course === 'kids' ? 'Anh' : 'Trung') + ' <b>2 lần</b> (lần 2 chậm hơn một chút, 0,85). Giữ màn hình sáng khi nghe.</p>' +
       (loopSt.items.length ? '<div class="kit-loop-han" id="kitLoopHan" lang="zh-CN"></div><div class="kit-loop-vi" id="kitLoopVi"></div><div class="kit-sub" id="kitLoopN" style="text-align:center"></div>' : '<div class="kit-warn">Chưa có câu nào để nghe. Hãy học vài bài trước.</div>') +
       '<div class="kit-row"><button type="button" class="go" id="kitLoopPlay">' + (loopSt.items.length ? '▶ Phát' : '▶') + '</button><button type="button" id="kitLoopStop">⏹ Dừng</button><button type="button" id="kitLoopClose">Đóng</button></div></div>';
     loopEl.classList.add('open');
     $('#kitLoopPlay', loopEl).onclick = function () { if (loopSt.items.length) runLoop(); };
     $('#kitLoopStop', loopEl).onclick = stopLoop;
     $('#kitLoopClose', loopEl).onclick = function () { stopLoop(); loopEl.classList.remove('open'); };
-    if (loopSt.items.length) { var it = loopSt.items[0]; $('#kitLoopHan', loopEl).textContent = it.han; $('#kitLoopVi', loopEl).textContent = it.vi; $('#kitLoopN', loopEl).textContent = '1/' + loopSt.items.length; }
+    if (loopSt.items.length) { var it = loopSt.items[0]; $('#kitLoopHan', loopEl).textContent = '？'; $('#kitLoopVi', loopEl).textContent = it.vi; $('#kitLoopN', loopEl).textContent = '1/' + loopSt.items.length; }
   }
   api.openLoop = openLoop; api.stopLoop = stopLoop; api.loopItems = loopItems;
 
