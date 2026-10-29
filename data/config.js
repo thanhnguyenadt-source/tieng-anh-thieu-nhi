@@ -8,7 +8,7 @@ window.APP_CONFIG = {
   /* AUDIO: đặt true sau khi đã render âm thanh sprite (docs/upgrade/AUDIO_RUNBOOK.md) và chép thư mục audio/ lên cùng chỗ với index.html */
   /* PUBLIC_URL: địa chỉ công khai in ở chân thẻ ảnh thành tích (để trống thì dùng địa chỉ trang khi chạy qua https) */
   PUBLIC_URL: '',
-  AUDIO: false,
+  AUDIO: true,
   REPORT_FORM_URL: '',
   REPORT_FIELDS: { course: "", lesson: "", item: "", text: "", browser: "", note: "", summary: "" }
 };
