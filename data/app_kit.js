@@ -746,6 +746,196 @@
     return ankiWord(text);
   }
   function closeBubble() { if (bubble) { bubble.remove(); bubble = null; } }
+
+  var KIDS_BASE_DICT = {
+    'this': { vi: 'đây, cái này', ipa: '/ðɪs/', pos: 'đại từ' },
+    'that': { vi: 'đó, cái kia', ipa: '/ðæt/', pos: 'đại từ' },
+    'these': { vi: 'những cái này', ipa: '/ðiːz/', pos: 'đại từ' },
+    'those': { vi: 'những cái kia', ipa: '/ðoʊz/', pos: 'đại từ' },
+    'i': { vi: 'tôi (con)', ipa: '/aɪ/', pos: 'đại từ' },
+    'you': { vi: 'bạn', ipa: '/juː/', pos: 'đại từ' },
+    'he': { vi: 'cậu ấy, anh ấy', ipa: '/hiː/', pos: 'đại từ' },
+    'she': { vi: 'cô ấy, bạn ấy', ipa: '/ʃiː/', pos: 'đại từ' },
+    'it': { vi: 'nó', ipa: '/ɪt/', pos: 'đại từ' },
+    'we': { vi: 'chúng tôi, chúng mình', ipa: '/wiː/', pos: 'đại từ' },
+    'they': { vi: 'họ, chúng nó', ipa: '/ðeɪ/', pos: 'đại từ' },
+    'is': { vi: 'thì, là, ở', ipa: '/ɪz/', pos: 'động từ' },
+    'am': { vi: 'thì, là, ở', ipa: '/æm/', pos: 'động từ' },
+    'are': { vi: 'thì, là, ở', ipa: '/ɑːr/', pos: 'động từ' },
+    'was': { vi: 'đã là, đã ở', ipa: '/wʌz/', pos: 'động từ' },
+    'were': { vi: 'đã là, đã ở', ipa: '/wɜːr/', pos: 'động từ' },
+    'be': { vi: 'thì, là, ở', ipa: '/biː/', pos: 'động từ' },
+    'have': { vi: 'có', ipa: '/hæv/', pos: 'động từ' },
+    'has': { vi: 'có', ipa: '/hæz/', pos: 'động từ' },
+    'had': { vi: 'đã có', ipa: '/hæd/', pos: 'động từ' },
+    'like': { vi: 'thích', ipa: '/laɪk/', pos: 'động từ' },
+    'likes': { vi: 'thích', ipa: '/laɪks/', pos: 'động từ' },
+    'love': { vi: 'rất yêu quý, yêu thích', ipa: '/lʌv/', pos: 'động từ' },
+    'can': { vi: 'có thể', ipa: '/kæn/', pos: 'động từ' },
+    'my': { vi: 'của tôi (con)', ipa: '/maɪ/', pos: 'sở hữu' },
+    'your': { vi: 'của bạn', ipa: '/jɔːr/', pos: 'sở hữu' },
+    'his': { vi: 'của cậu ấy', ipa: '/hɪz/', pos: 'sở hữu' },
+    'her': { vi: 'của cô ấy', ipa: '/hɜːr/', pos: 'sở hữu' },
+    'our': { vi: 'của chúng mình', ipa: '/aʊər/', pos: 'sở hữu' },
+    'their': { vi: 'của họ', ipa: '/ðer/', pos: 'sở hữu' },
+    'in': { vi: 'trong, ở trong', ipa: '/ɪn/', pos: 'giới từ' },
+    'on': { vi: 'trên, ở trên', ipa: '/ɑːn/', pos: 'giới từ' },
+    'under': { vi: 'dưới, ở dưới', ipa: '/ˈʌn.dɚ/', pos: 'giới từ' },
+    'at': { vi: 'ở, tại', ipa: '/æt/', pos: 'giới từ' },
+    'with': { vi: 'với, cùng với', ipa: '/wɪð/', pos: 'giới từ' },
+    'for': { vi: 'cho, dành cho', ipa: '/fɔːr/', pos: 'giới từ' },
+    'to': { vi: 'đến, tới', ipa: '/tuː/', pos: 'giới từ' },
+    'from': { vi: 'từ', ipa: '/frʌm/', pos: 'giới từ' },
+    'the': { vi: '', ipa: '/ðə/', pos: 'mạo từ' },
+    'a': { vi: 'một', ipa: '/ə/', pos: 'mạo từ' },
+    'an': { vi: 'một', ipa: '/æn/', pos: 'mạo từ' },
+    'one': { vi: 'một', ipa: '/wʌn/', pos: 'số đếm' },
+    'two': { vi: 'hai', ipa: '/tuː/', pos: 'số đếm' },
+    'three': { vi: 'ba', ipa: '/θriː/', pos: 'số đếm' },
+    'four': { vi: 'bốn', ipa: '/fɔːr/', pos: 'số đếm' },
+    'five': { vi: 'năm', ipa: '/faɪv/', pos: 'số đếm' },
+    'six': { vi: 'sáu', ipa: '/sɪks/', pos: 'số đếm' },
+    'seven': { vi: 'bảy', ipa: '/ˈsev.ən/', pos: 'số đếm' },
+    'eight': { vi: 'tám', ipa: '/eɪt/', pos: 'số đếm' },
+    'nine': { vi: 'chín', ipa: '/naɪn/', pos: 'số đếm' },
+    'ten': { vi: 'mười', ipa: '/ten/', pos: 'số đếm' },
+    'long': { vi: 'dài', ipa: '/lɔːŋ/', pos: 'tính từ' },
+    'short': { vi: 'ngắn', ipa: '/ʃɔːrt/', pos: 'tính từ' },
+    'big': { vi: 'to, lớn', ipa: '/bɪɡ/', pos: 'tính từ' },
+    'small': { vi: 'nhỏ bé', ipa: '/smɔːl/', pos: 'tính từ' },
+    'brown': { vi: 'màu nâu', ipa: '/braʊn/', pos: 'tính từ' },
+    'blue': { vi: 'màu xanh dương', ipa: '/bluː/', pos: 'tính từ' },
+    'green': { vi: 'màu xanh lá', ipa: '/ɡriːn/', pos: 'tính từ' },
+    'red': { vi: 'màu đỏ', ipa: '/red/', pos: 'tính từ' },
+    'pink': { vi: 'màu hồng', ipa: '/pɪŋk/', pos: 'tính từ' },
+    'yellow': { vi: 'màu vàng', ipa: '/ˈjel.oʊ/', pos: 'tính từ' },
+    'black': { vi: 'màu đen', ipa: '/blæk/', pos: 'tính từ' },
+    'white': { vi: 'màu trắng', ipa: '/waɪt/', pos: 'tính từ' },
+    'water': { vi: 'nước', ipa: '/ˈwɑː.t̬ɚ/', pos: 'danh từ' },
+    'room': { vi: 'căn phòng', ipa: '/ruːm/', pos: 'danh từ' },
+    'kitchen': { vi: 'nhà bếp', ipa: '/ˈkɪtʃ.ən/', pos: 'danh từ' },
+    'bed': { vi: 'giường ngủ', ipa: '/bed/', pos: 'danh từ' },
+    'box': { vi: 'cái hộp', ipa: '/bɑːks/', pos: 'danh từ' },
+    'mom': { vi: 'mẹ', ipa: '/mɑːm/', pos: 'danh từ' },
+    'dad': { vi: 'bố, ba', ipa: '/dæd/', pos: 'danh từ' },
+    'sister': { vi: 'chị/em gái', ipa: '/ˈsɪs.tɚ/', pos: 'danh từ' },
+    'brother': { vi: 'anh/em trai', ipa: '/ˈbrʌð.ɚ/', pos: 'danh từ' },
+    'grandma': { vi: 'bà', ipa: '/ˈɡræn.mɑː/', pos: 'danh từ' },
+    'grandpa': { vi: 'ông', ipa: '/ˈɡræn.pɑː/', pos: 'danh từ' },
+    'family': { vi: 'gia đình', ipa: '/ˈfæm.əl.i/', pos: 'danh từ' },
+    'eyes': { vi: 'đôi mắt', ipa: '/aɪz/', pos: 'danh từ' },
+    'hair': { vi: 'mái tóc', ipa: '/her/', pos: 'danh từ' },
+    'hands': { vi: 'đôi bàn tay', ipa: '/hændz/', pos: 'danh từ' },
+    'ears': { vi: 'đôi tai', ipa: '/ɪrz/', pos: 'danh từ' },
+    'cats': { vi: 'con mèo', ipa: '/kæts/', pos: 'danh từ' },
+    'dogs': { vi: 'con chó', ipa: '/dɔːɡz/', pos: 'danh từ' },
+    'cars': { vi: 'xe ô tô', ipa: '/kɑːrz/', pos: 'danh từ' }
+  };
+
+  function lookupWordData(text) {
+    var s = String(text || '').toLowerCase().replace(/[^a-z']/g, '');
+    if (!s) return null;
+    if (KIDS_BASE_DICT[s]) return Object.assign({ text: s }, KIDS_BASE_DICT[s]);
+    var w = ankiWord(s);
+    if (w) return { text: w.text || s, vi: w.vi, ipa: w.read || w.ipa || '', pos: w.pos || '', id: w.id, ico: w.ico };
+    if (s.endsWith('s') && ankiWord(s.slice(0, -1))) { var b1 = ankiWord(s.slice(0, -1)); return { text: s, vi: b1.vi, ipa: b1.read || b1.ipa || '', pos: b1.pos, id: b1.id, ico: b1.ico }; }
+    if (s.endsWith('es') && ankiWord(s.slice(0, -2))) { var b2 = ankiWord(s.slice(0, -2)); return { text: s, vi: b2.vi, ipa: b2.read || b2.ipa || '', pos: b2.pos, id: b2.id, ico: b2.ico }; }
+    if (s.endsWith('ing') && ankiWord(s.slice(0, -3))) { var b3 = ankiWord(s.slice(0, -3)); return { text: s, vi: b3.vi, ipa: b3.read || b3.ipa || '', pos: b3.pos, id: b3.id, ico: b3.ico }; }
+    return null;
+  }
+
+  function resolveChunkVi(text) {
+    var raw = String(text || '').trim();
+    var single = lookupWordData(raw);
+    var tokens = raw.split(/\s+/).filter(Boolean);
+    if (tokens.length <= 1) {
+      return single ? {
+        text: raw,
+        vi: single.vi,
+        read: single.ipa,
+        pos: single.pos,
+        sub: [single],
+        id: single.id,
+        ico: single.ico
+      } : null;
+    }
+    var sub = tokens.map(function (t) {
+      return lookupWordData(t) || { text: t, vi: t, ipa: '', pos: '' };
+    });
+    var ipa = sub.map(function (s) { return s.ipa; }).filter(Boolean).join(' ');
+    var t0 = tokens[0].toLowerCase();
+    var t1 = tokens[1] ? tokens[1].toLowerCase() : '';
+    var vi = '';
+
+    if (['my', 'your', 'his', 'her', 'our', 'their'].indexOf(t0) >= 0 && tokens.length === 2) {
+      var pMap = { my: 'của tôi (con)', your: 'của bạn', his: 'của cậu ấy', her: 'của cô ấy', our: 'của chúng mình', their: 'của họ' };
+      vi = sub[1].vi + ' ' + (pMap[t0] || ('của ' + t0));
+    } else if (['is', 'are', 'am', 'was', 'were'].indexOf(t0) >= 0 && t1.indexOf('ing') > 0) {
+      vi = 'đang ' + sub[1].vi;
+    } else if (['is', 'are', 'am'].indexOf(t0) >= 0 && ['in', 'on', 'under', 'at'].indexOf(t1) >= 0) {
+      vi = sub[1].vi;
+    } else if (['in', 'on', 'under', 'at', 'with', 'for', 'from', 'to'].indexOf(t0) >= 0) {
+      var restRes = resolveChunkVi(tokens.slice(1).join(' '));
+      vi = sub[0].vi + ' ' + (restRes ? restRes.vi : tokens.slice(1).join(' '));
+    } else if (['a', 'an', 'the'].indexOf(t0) >= 0) {
+      var restRes2 = resolveChunkVi(tokens.slice(1).join(' '));
+      vi = (t0 === 'the' ? '' : (sub[0].vi + ' ')) + (restRes2 ? restRes2.vi : tokens.slice(1).join(' '));
+    } else if (sub[0].pos === 'số đếm' || sub[0].pos === 'num') {
+      vi = sub[0].vi + ' ' + sub[1].vi;
+    } else if (sub[0].pos === 'tính từ' || sub[0].pos === 'adj') {
+      vi = sub[1].vi + ' ' + sub[0].vi;
+    } else {
+      vi = sub.map(function (s) { return s.vi; }).filter(Boolean).join(' ');
+    }
+
+    var keyWord = null;
+    for (var i = sub.length - 1; i >= 0; i--) {
+      if (sub[i].id) { keyWord = sub[i]; break; }
+    }
+
+    return {
+      text: raw,
+      vi: vi.trim(),
+      read: ipa ? '/' + ipa.replace(/[\/]/g, '').trim() + '/' : '',
+      pos: 'cụm từ (phrase)',
+      sub: sub,
+      id: keyWord ? keyWord.id : null,
+      ico: keyWord ? keyWord.ico : null
+    };
+  }
+
+  function translateSentenceText(sen) {
+    var s = String(sen || '').trim();
+    if (!s) return '';
+    var mPoss = /^This is my (mom|dad|sister|brother|grandma|grandpa|family)/i.exec(s);
+    if (mPoss) {
+      var nMap = { mom: 'mẹ', dad: 'bố (ba)', sister: 'chị/em gái', brother: 'anh/em trai', grandma: 'bà', grandpa: 'ông', family: 'gia đình' };
+      return 'Đây là ' + (nMap[mPoss[1].toLowerCase()] || mPoss[1]) + ' của tôi (con).';
+    }
+    var mShe = /^She is my (mom|sister|grandma|friend)/i.exec(s);
+    if (mShe) {
+      var nMap2 = { mom: 'mẹ', sister: 'chị/em gái', grandma: 'bà', friend: 'bạn' };
+      return 'Cô ấy là ' + (nMap2[mShe[1].toLowerCase()] || mShe[1]) + ' của tôi (con).';
+    }
+    var mHe = /^He is my (dad|brother|grandpa|friend)/i.exec(s);
+    if (mHe) {
+      var nMap3 = { dad: 'bố (ba)', brother: 'anh/em trai', grandpa: 'ông', friend: 'bạn' };
+      return 'Cậu ấy là ' + (nMap3[mHe[1].toLowerCase()] || mHe[1]) + ' của tôi (con).';
+    }
+    var mLove = /^I love my (mom|dad|sister|brother|grandma|grandpa|family)/i.exec(s);
+    if (mLove) {
+      var nMap4 = { mom: 'mẹ', dad: 'bố', sister: 'chị/em gái', brother: 'anh/em trai', grandma: 'bà', grandpa: 'ông', family: 'gia đình' };
+      return 'Tôi rất yêu quý ' + (nMap4[mLove[1].toLowerCase()] || mLove[1]) + ' của mình.';
+    }
+    var words = s.split(/\s+/);
+    var viWords = words.map(function(w) {
+      var r = lookupWordData(w);
+      return r ? r.vi : w;
+    });
+    return viWords.join(' ');
+  }
+  api.translateSentence = translateSentenceText;
+  api.resolveChunk = resolveChunkVi;
   /* ---- họ hàng âm Hán Việt (zh): dữ liệu window.ZH_HV_FAMILY (script đo từ HSK 1–5); chỉ hiện từ đến cấp đang học; quy luật là XU HƯỚNG ---- */
   var PY_INI = ['zh', 'ch', 'sh', 'b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'z', 'c', 's', 'r', 'y', 'w'];
   var VI_INI = ['ngh', 'ng', 'nh', 'ph', 'th', 'tr', 'kh', 'gh', 'gi', 'qu', 'ch', 'b', 'c', 'd', 'đ', 'g', 'h', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'x'];
@@ -797,22 +987,49 @@
   }
   function showBubble(pill, text) {
     closeBubble();
-    var w = ankiWord(text), py = $('.l-py', pill), hv = $('.l-hv', pill);
-    var read = w ? w.read : (py ? py.textContent : ''), hvt = hv ? hv.textContent : (w && w.hv) || '';
-    var h = '<div class="kit-b-w">' + esc(text) + '</div>';
+    var res = resolveChunkVi(text);
+    var py = $('.l-py', pill), hv = $('.l-hv', pill);
+    var read = res ? res.read : (py ? py.textContent : '');
+    var hvt = hv ? hv.textContent : (res && res.hv) || '';
+    var h = '<div class="kit-b-w">' + esc(text) + (res && res.ico ? ' ' + res.ico : '') + '</div>';
     if (read) h += '<div class="kit-b-r">' + esc(read) + (hvt && CFG.course === 'zh' ? ' · <b>' + esc(hvt) + '</b>' : '') + '</div>';
-    if (w && w.pos) h += '<div class="kit-b-p">' + esc(w.pos) + '</div>';
-    h += '<div class="kit-b-m">' + (w ? esc(w.vi) : 'Chưa có nghĩa riêng cho từ này — xem bản dịch cả câu.') + '</div>';
-    h += hvFamilyHtml(text, w);
-    if (w) h += '<div class="kit-b-n">🔎 Đã đánh dấu "vừa tra": thẻ Anki của từ này được ưu tiên ôn.</div>';
+    if (res && res.pos) h += '<div class="kit-b-p">' + esc(res.pos) + '</div>';
+    var viMeaning = res ? res.vi : 'Chưa có nghĩa riêng cho từ này — xem bản dịch cả câu.';
+    h += '<div class="kit-b-m" style="color:#047857;font-size:17px;font-weight:800;margin:6px 0 4px;">👉 ' + esc(viMeaning) + '</div>';
+    if (res && res.sub && res.sub.length > 1) {
+      h += '<div class="kit-b-subwords" style="border-top:1px dashed #cbd5e1;padding-top:6px;margin-top:6px;font-size:13px;color:#334155;">' +
+        res.sub.map(function (sw) {
+          return '<div>• <b>' + esc(sw.text) + '</b>' + (sw.ipa ? ' <small style="color:#1d4ed8;">' + esc(sw.ipa) + '</small>' : '') + ': ' + esc(sw.vi) + '</div>';
+        }).join('') + '</div>';
+    }
+    var fullSen = pill.dataset.full;
+    if (!fullSen) {
+      var card = pill.closest && pill.closest('.chunk-card');
+      if (card) {
+        var m = /focusP1Card\(\s*\d+\s*,\s*(['"`])((?:\\.|(?!\1).)*)\1/.exec(card.getAttribute('onclick') || '');
+        if (m) fullSen = m[2];
+      }
+    }
+    if (fullSen) {
+      var senVi = translateSentenceText(fullSen);
+      h += '<div class="kit-b-ctx" style="background:#f1f5f9;border-radius:8px;padding:6px 8px;margin-top:8px;font-size:13px;">' +
+        '<div style="color:#64748b;font-weight:600;">Trong câu:</div>' +
+        '<div style="color:#0f172a;font-weight:700;">"' + esc(fullSen) + '"</div>' +
+        (senVi ? '<div style="color:#047857;font-weight:700;margin-top:2px;">👉 ' + esc(senVi) + '</div>' : '') +
+        '</div>';
+    }
+    h += hvFamilyHtml(text, res);
+    if (res && res.id && root.ANKI && root.ANKI.markLooked) {
+      root.ANKI.markLooked(res.id);
+      h += '<div class="kit-b-n">🔎 Đã đánh dấu "vừa tra": thẻ Anki của từ được ưu tiên ôn.</div>';
+    }
     bubble = el('div', { class: 'kit-bubble', role: 'tooltip' }, h);
     doc.body.appendChild(bubble);
-    var r = pill.getBoundingClientRect(), bw = Math.min(280, (root.innerWidth || 360) - 16);
+    var r = pill.getBoundingClientRect(), bw = Math.min(300, (root.innerWidth || 360) - 16);
     bubble.style.width = bw + 'px';
     var left = Math.max(8, Math.min((root.innerWidth || 360) - bw - 8, r.left + r.width / 2 - bw / 2)), top = r.bottom + 8;
     if (top + 140 > (root.innerHeight || 700)) top = Math.max(8, r.top - bubble.offsetHeight - 8);
     bubble.style.left = left + 'px'; bubble.style.top = top + 'px';
-    if (w && root.ANKI && root.ANKI.markLooked) root.ANKI.markLooked(w.id);
     setTimeout(function () { var h2 = function () { closeBubble(); doc.removeEventListener('click', h2, true); }; doc.addEventListener('click', h2, true); }, 50);
   }
   addCSS('.kit-tip{background:#ecfeff;border:2px solid #67e8f9;border-radius:16px;padding:10px 14px;margin:0 0 10px;color:#164e63;font:600 16px/1.45 system-ui,sans-serif}.kit-tip-h{font-weight:900;margin-bottom:4px}.kit-tip ol{margin:0 0 6px 20px;padding:0}.kit-tip li{margin:2px 0}' +

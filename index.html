@@ -1212,6 +1212,13 @@
        4. PHA 1: NGHE TRANH + KHUNG QUY LUẬT NGỮ PHÁP NAM CHÂM TRỰC QUAN
        ========================================================================= */
     let activeCardIdx = 0;
+    function getSentenceVi(full, parts) {
+      if (window.AppKit && window.AppKit.translateSentence) {
+        return window.AppKit.translateSentence(full);
+      }
+      return '';
+    }
+
     function renderP1_VisualAndGrammar(ws, les) {
       const focusItem = les.chunks[activeCardIdx % les.chunks.length];
       const gm = les.grammar;
@@ -1233,28 +1240,34 @@
         </div>
 
         <div class="chunk-grid">
-          ${les.chunks.map((ch, idx) => `
+          ${les.chunks.map((ch, idx) => {
+            const vi = getSentenceVi(ch.full, ch.parts);
+            return `
             <div class="chunk-card" style="border-color:${idx===activeCardIdx?'#2563eb':'#cbd5e1'};background:${idx===activeCardIdx?'#eff6ff':'#fff'};"
                  onclick="focusP1Card(${idx}, '${ch.full}')">
               <div class="scene-big">${ch.scene}</div>
               <div class="card-right-info">
                 <div class="blocks-row">
                   ${ch.parts.map(p => `
-                    <span class="c-pill ${p.c}" onclick="event.stopPropagation(); speakText('${p.t}')">
+                    <span class="c-pill ${p.c}" data-full="${ch.full}" onclick="event.stopPropagation(); speakText('${p.t}')">
                       ${p.ico} ${p.t}
                     </span>
                   `).join('')}
                 </div>
-                <small style="color:#1d4ed8;font-weight:800;font-size:13.5px;">🔊 Bấm thẻ nghe cả câu • Bấm ô màu nghe từng cụm</small>
+                ${vi ? `<div class="card-vi-trans" style="font-size:15px;font-weight:700;color:#047857;margin:3px 0 2px;">👉 ${vi}</div>` : ''}
+                <small style="color:#1d4ed8;font-weight:800;font-size:13.5px;">🔊 Bấm thẻ nghe cả câu • Bấm ô màu nghe từng cụm & xem nghĩa</small>
               </div>
             </div>
-          `).join('')}
+          `;}).join('')}
         </div>
 
         <div class="right-stage" style="min-height:115px;padding:14px 24px;flex-direction:row;justify-content:space-between;">
           <div style="display:flex;align-items:center;gap:18px;">
             <span style="font-size:56px;">${focusItem.scene}</span>
-            <h2 style="font-size:40px;margin:0;color:#1e3a8a;">"${focusItem.full}"</h2>
+            <div>
+              <h2 style="font-size:38px;margin:0;color:#1e3a8a;">"${focusItem.full}"</h2>
+              ${getSentenceVi(focusItem.full, focusItem.parts) ? `<div style="font-size:20px;font-weight:700;color:#047857;margin-top:2px;">👉 ${getSentenceVi(focusItem.full, focusItem.parts)}</div>` : ''}
+            </div>
           </div>
           <div style="display:flex;gap:12px;">
             <button class="hero-audio-btn" onclick="speakText('${focusItem.full}')">
