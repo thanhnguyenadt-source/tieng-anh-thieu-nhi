@@ -335,8 +335,11 @@
     return '';
   }
 
-  /* ---------- Phát âm âm thanh ---------- */
+  /* ---------- Phát âm âm thanh chuẩn (Sprite Render MP3 + Fallback Trình duyệt) ---------- */
   var chainToken = 0;
+  var ankiAudio = null;
+  var ankiCurPlay = null;
+
   function synth() { return root.speechSynthesis || null; }
   function pickVoice(langs) {
     var s = synth(); if (!s || !s.getVoices) return null;
@@ -351,15 +354,56 @@
     }
     return null;
   }
-  function speakPart(text, langs) {
-    var sp = root.AppKit && root.AppKit.playSprite ? root.AppKit.playSprite(text, RATES[rateName]) : null;
-    if (sp) return sp.then(function (ok) { return ok ? null : speakBrowserPart(text, langs); });
-    return speakBrowserPart(text, langs);
+
+  function pause(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  function stopAnkiAudio() {
+    chainToken++;
+    if (ankiCurPlay) {
+      try { ankiCurPlay.cancel(); } catch (e) {}
+      ankiCurPlay = null;
+    }
+    try { if (root.AppKit && root.AppKit.stopSprite) root.AppKit.stopSprite(); } catch (e) {}
+    try { var s = synth(); if (s && s.cancel) s.cancel(); } catch (e) {}
   }
+  var stopSpeech = stopAnkiAudio;
+
+  function ensureLessonAudio(lessonId) {
+    if (!lessonId) return;
+    if (root.AppKit && root.AppKit.preloadLesson) {
+      root.AppKit.preloadLesson(lessonId);
+    }
+    var key = 'kids/' + lessonId;
+    if (!root.AUDIO_MAP || !root.AUDIO_MAP[key]) {
+      var s = document.createElement('script');
+      s.src = 'audio/kids/' + lessonId + '.js';
+      document.head.appendChild(s);
+    }
+  }
+
+  function findSpriteEntry(text) {
+    if (!root.AUDIO_MAP) return null;
+    var norm = String(text || '').trim().toLowerCase();
+    var punctTrim = norm.replace(/[.,?!]+$/, '').trim();
+    for (var k in root.AUDIO_MAP) {
+      var m = root.AUDIO_MAP[k];
+      if (m && m.items) {
+        if (m.items[text]) return { src: m.src, start: m.items[text][0], end: m.items[text][1], key: text };
+        for (var it in m.items) {
+          var low = it.toLowerCase();
+          if (low === norm || low.replace(/[.,?!]+$/, '').trim() === punctTrim) {
+            return { src: m.src, start: m.items[it][0], end: m.items[it][1], key: it };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   function speakBrowserPart(text, langs) {
     return new Promise(function (resolve) {
-      var s = synth(); if (!s || !text) { resolve(); return; }
-      var done = false, fin = function () { if (!done) { done = true; resolve(); } };
+      var s = synth(); if (!s || !text) { resolve(false); return; }
+      var done = false, fin = function () { if (!done) { done = true; resolve(true); } };
       try {
         var u = new root.SpeechSynthesisUtterance(text), v = pickVoice(langs);
         if (v) u.voice = v;
@@ -371,32 +415,104 @@
       setTimeout(fin, Math.max(2500, String(text).length * 450) + 1500);
     });
   }
-  function pause(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
-  function stopSpeech() {
-    chainToken++;
-    try { if (root.AppKit && root.AppKit.stopSprite) root.AppKit.stopSprite(); } catch (e) {}
-    try { var s = synth(); if (s && s.cancel) s.cancel(); } catch (e) {}
+
+  function playAudioItem(text, langs) {
+    langs = langs || CFG.voiceLangs || ['en-US', 'en-GB'];
+    if (!text) return Promise.resolve(true);
+
+    // 1. Thử phát từ audio sprite render sẵn (MP3 chất lượng chuẩn của bài)
+    var entry = findSpriteEntry(text);
+    if (entry) {
+      return new Promise(function (resolve) {
+        if (!ankiAudio) {
+          ankiAudio = new (root.Audio || window.Audio)();
+          ankiAudio.preload = 'auto';
+        }
+        var a = ankiAudio, done = false, tick = null, guard = null;
+        function fin(ok) {
+          if (done) return;
+          done = true;
+          clearInterval(tick);
+          clearTimeout(guard);
+          a.removeEventListener('ended', onEnd);
+          a.removeEventListener('error', onErr);
+          try { a.pause(); } catch (x) {}
+          if (ankiCurPlay === handle) ankiCurPlay = null;
+          resolve(ok);
+        }
+        var handle = { cancel: function () { fin(true); } };
+        ankiCurPlay = handle;
+        function onEnd() { fin(true); }
+        function onErr() { fin(false); }
+        a.addEventListener('ended', onEnd);
+        a.addEventListener('error', onErr);
+
+        function check() {
+          if (a.currentTime >= entry.end + 0.05) fin(true);
+        }
+
+        function start() {
+          try {
+            a.currentTime = Math.max(0, entry.start - 0.02);
+            var p = a.play();
+            if (p && p.catch) p.catch(function () { fin(false); });
+          } catch (e) {
+            fin(false);
+            return;
+          }
+          tick = setInterval(check, 25);
+        }
+
+        var duration = (entry.end - entry.start) * 1000 + 4000;
+        guard = setTimeout(function () { fin(false); }, duration);
+
+        if (a.getAttribute('data-src') !== entry.src) {
+          a.setAttribute('data-src', entry.src);
+          a.src = entry.src;
+          var onMeta = function () {
+            a.removeEventListener('loadedmetadata', onMeta);
+            if (!done) start();
+          };
+          a.addEventListener('loadedmetadata', onMeta);
+          try { a.load(); } catch (x) { fin(false); }
+        } else {
+          start();
+        }
+      }).then(function (ok) {
+        if (ok) return true;
+        return speakBrowserPart(text, langs);
+      });
+    }
+
+    // 2. Dự phòng: giọng đọc trình duyệt nếu không tìm thấy trong sprite
+    return speakBrowserPart(text, langs);
   }
-  function playChain(w, parts) {
-    parts = parts || ['word', 'def', 'ex'];
+
+  /* Đọc chuẩn theo Anki: ĐỌC TỪ -> NGHỈ 500ms -> ĐỌC CẢ CÂU VÍ DỤ */
+  function playWordAndSentence(w) {
+    if (!w) return Promise.resolve();
+    stopAnkiAudio();
     var tok = ++chainToken;
     var langs = CFG.voiceLangs || ['en-US', 'en-GB'];
-    stopSpeech();
-    var items = [];
-    if (parts.indexOf('word') >= 0 && w.text) items.push(w.text);
-    if (parts.indexOf('def') >= 0) {
-      var d = getLearnerDef(w);
-      if (d) items.push(d);
-    }
-    if (parts.indexOf('ex') >= 0 && w.ex && (w.ex.t || w.ex.en)) {
-      items.push(w.ex.t || w.ex.en);
-    }
-    var p = Promise.resolve();
-    items.forEach(function (it, idx) {
-      p = p.then(function () { return tok === chainToken ? speakPart(it, langs) : null; })
-           .then(function () { return idx < items.length - 1 && tok === chainToken ? pause(800) : null; });
+    var wordText = w.text || '';
+    var sentenceText = (w.ex && (w.ex.t || w.ex.en)) || '';
+
+    // Bước 1: Đọc từ vựng
+    return playAudioItem(wordText, langs).then(function () {
+      if (tok !== chainToken) return;
+      // Bước 2: Nghỉ 500ms
+      return pause(500);
+    }).then(function () {
+      if (tok !== chainToken) return;
+      // Bước 3: Đọc cả câu ví dụ
+      if (sentenceText) {
+        return playAudioItem(sentenceText, langs);
+      }
     });
-    return p;
+  }
+
+  function playChain(w, parts) {
+    return playWordAndSentence(w);
   }
 
   /* ---------- Giao diện Anki 100% (CSS hoàn chỉnh) ---------- */
@@ -651,6 +767,7 @@
     var defText = getLearnerDef(w);
     var exText = (w.ex && (w.ex.t || w.ex.en)) || '';
     var exVi = resolveSentenceVi(w.ex, w);
+    ensureLessonAudio(w.lesson);
 
     h += '<div class="anki-card-body">';
 
@@ -662,7 +779,8 @@
       h += '<div class="anki-letter-hint">' + esc(makeLetterHint(w.text)) + '</div>';
       h += '<div class="anki-def-line">' + makeCloze(defText, w.text, w.forms) + '</div>';
       if (exText) {
-        h += '<div class="anki-ex-line">→ ' + makeCloze(exText, w.text, w.forms) + '</div>';
+        h += '<div class="anki-ex-line">→ ' + makeCloze(exText, w.text, w.forms) +
+          ' <button type="button" class="anki-audio-mini" id="ankiFrontAudio" title="Nghe câu ví dụ">🔊 Nghe câu</button></div>';
         if (exVi) h += '<div class="anki-ex-vi">(👉 ' + esc(exVi) + ')</div>';
       }
     } else {
@@ -678,10 +796,9 @@
         if (exVi) h += '<div class="anki-ex-vi">(👉 ' + esc(exVi) + ')</div>';
       }
       h += '<div class="anki-audio-row">' +
-        '<button type="button" class="anki-audio-btn" data-play="word">🔊 Từ</button>' +
-        '<button type="button" class="anki-audio-btn" data-play="def">🔊 Định nghĩa</button>' +
-        '<button type="button" class="anki-audio-btn" data-play="ex">🔊 Ví dụ</button>' +
-        '<button type="button" class="anki-audio-btn" data-play="all">▶ Cả chuỗi</button>' +
+        '<button type="button" class="anki-audio-btn" data-play="word">🔊 Từ: ' + esc(w.text) + '</button>' +
+        '<button type="button" class="anki-audio-btn" data-play="ex">🔊 Cả câu</button>' +
+        '<button type="button" class="anki-audio-btn" data-play="all">▶ Đọc cả hai (Từ + Câu)</button>' +
         '</div>';
     }
     h += '</div>';
@@ -735,7 +852,7 @@
         inp.focus();
       }
     } else {
-      playChain(w);
+      playWordAndSentence(w);
     }
   }
 
@@ -770,6 +887,19 @@
       };
     }
 
+    var bFrontAud = $('#ankiFrontAudio');
+    if (bFrontAud) {
+      bFrontAud.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var w = curWord();
+        if (w && w.ex && (w.ex.t || w.ex.en)) {
+          stopAnkiAudio();
+          playAudioItem(w.ex.t || w.ex.en);
+        }
+      };
+    }
+
     modalEl.querySelectorAll('.anki-grade-btn').forEach(function (btn) {
       btn.onclick = function () {
         var g = parseInt(btn.getAttribute('data-g'), 10);
@@ -782,7 +912,15 @@
         var w = curWord();
         if (!w) return;
         var p = btn.getAttribute('data-play');
-        playChain(w, p === 'all' ? ['word', 'def', 'ex'] : [p]);
+        if (p === 'word') {
+          stopAnkiAudio();
+          playAudioItem(w.text);
+        } else if (p === 'ex') {
+          stopAnkiAudio();
+          playAudioItem(w.ex && (w.ex.t || w.ex.en));
+        } else {
+          playWordAndSentence(w);
+        }
       };
     });
 
@@ -795,7 +933,7 @@
     if ((b = $('#ankiMore'))) {
       b.onclick = function () {
         var w = curWord();
-        if (w) playChain(w);
+        if (w) playWordAndSentence(w);
       };
     }
   }
@@ -811,6 +949,7 @@
   function grade(g) {
     var w = curWord(), k = curKey();
     if (!w || !session || session.face !== 'back') return;
+    stopAnkiAudio();
 
     var wasNew = !cards[k] || cards[k].status === 'new';
     cards[k] = sm2(cards[k] || newCard(), g, Date.now());
@@ -846,6 +985,15 @@
     }
 
     if (session.mode === 'browse') return;
+
+    if (e.key === 'r' || e.key === 'R') {
+      var w = curWord();
+      if (w) {
+        e.preventDefault();
+        playWordAndSentence(w);
+      }
+      return;
+    }
 
     if (session.face === 'front') {
       if (tag === 'INPUT') {
