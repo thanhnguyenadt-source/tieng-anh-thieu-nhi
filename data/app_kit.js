@@ -904,9 +904,14 @@
     };
   }
 
-  function translateSentenceText(sen) {
+  function translateSentenceText(sen, parts) {
     var s = String(sen || '').trim();
     if (!s) return '';
+    if (/^Mom is in the kitchen/i.test(s)) return 'Mẹ ở trong nhà bếp.';
+    if (/^Dad is in the room/i.test(s)) return 'Bố ở trong căn phòng.';
+    if (/^I sleep on my bed/i.test(s)) return 'Con ngủ trên chiếc giường của mình.';
+    if (/^Open the big door/i.test(s)) return 'Mở cánh cửa lớn ra.';
+
     var mPoss = /^This is my (mom|dad|sister|brother|grandma|grandpa|family)/i.exec(s);
     if (mPoss) {
       var nMap = { mom: 'mẹ', dad: 'bố (ba)', sister: 'chị/em gái', brother: 'anh/em trai', grandma: 'bà', grandpa: 'ông', family: 'gia đình' };
@@ -927,6 +932,33 @@
       var nMap4 = { mom: 'mẹ', dad: 'bố', sister: 'chị/em gái', brother: 'anh/em trai', grandma: 'bà', grandpa: 'ông', family: 'gia đình' };
       return 'Tôi rất yêu quý ' + (nMap4[mLove[1].toLowerCase()] || mLove[1]) + ' của mình.';
     }
+
+    var mIsIn = /^(.+?)\s+(?:is|are|am)\s+in\s+(.+)$/i.exec(s);
+    if (mIsIn) {
+      var subjRes = resolveChunkVi(mIsIn[1]), locRes = resolveChunkVi(mIsIn[2]);
+      var sText = subjRes ? subjRes.vi : mIsIn[1], lText = locRes ? locRes.vi : mIsIn[2];
+      return (sText.charAt(0).toUpperCase() + sText.slice(1)) + ' ở trong ' + lText + '.';
+    }
+    var mIsOn = /^(.+?)\s+(?:is|are|am)\s+on\s+(.+)$/i.exec(s);
+    if (mIsOn) {
+      var subjRes2 = resolveChunkVi(mIsOn[1]), locRes2 = resolveChunkVi(mIsOn[2]);
+      var sText2 = subjRes2 ? subjRes2.vi : mIsOn[1], lText2 = locRes2 ? locRes2.vi : mIsOn[2];
+      return (sText2.charAt(0).toUpperCase() + sText2.slice(1)) + ' ở trên ' + lText2 + '.';
+    }
+    var mIsUnder = /^(.+?)\s+(?:is|are|am)\s+under\s+(.+)$/i.exec(s);
+    if (mIsUnder) {
+      var subjRes3 = resolveChunkVi(mIsUnder[1]), locRes3 = resolveChunkVi(mIsUnder[2]);
+      var sText3 = subjRes3 ? subjRes3.vi : mIsUnder[1], lText3 = locRes3 ? locRes3.vi : mIsUnder[2];
+      return (sText3.charAt(0).toUpperCase() + sText3.slice(1)) + ' ở dưới ' + lText3 + '.';
+    }
+
+    if (parts && parts.length) {
+      return parts.map(function(p) {
+        var r = resolveChunkVi(p.t);
+        return r ? r.vi : p.t;
+      }).filter(Boolean).join(' ') + '.';
+    }
+
     var words = s.split(/\s+/);
     var viWords = words.map(function(w) {
       var r = lookupWordData(w);

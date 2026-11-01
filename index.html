@@ -3,11 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0369a1" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <title>Cambridge Starters & Movers (27-Inch Master): Grammar + 4-Skills Exam</title>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(regs) {
+        regs.forEach(function(r) { r.update(); });
+      });
+    }
+  </script>
   <style>
     :root {
       --bg-main: #f0f9ff;
@@ -2224,7 +2234,7 @@
       }
     };
   </script>
-  <script src="data/app_kit.js"></script>
-  <script src="data/app_shell.js"></script>
+  <script src="data/app_kit.js?v=5"></script>
+  <script src="data/app_shell.js?v=5"></script>
 </body>
 </html>
