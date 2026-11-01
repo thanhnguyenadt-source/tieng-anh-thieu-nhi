@@ -869,8 +869,8 @@
     <header class="top-header">
       <div class="lesson-row">
         <div class="lesson-pills" id="lessonPills"></div>
-        <div style="font-size:13px;font-weight:900;color:#1e3a8a;background:#dbeafe;padding:4px 14px;border-radius:99px;">
-          ⌨️ Phím tắt: [Space] Nghe • [1,2,3,4] Chọn đáp án • Gõ phím trực tiếp ở Pha 4 & Thi Viết
+        <div onclick="showShortcutCheatsheet()" title="Bấm hoặc gõ [?] để xem toàn bộ phím tắt" style="font-size:13px;font-weight:900;color:#1e3a8a;background:#dbeafe;padding:5px 14px;border-radius:99px;cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;transition:transform .15s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+          ⌨️ Phím tắt: [Space] Nghe • [1,2,3,4] Chọn • [A] Anki • [?] Bảng phím tắt
         </div>
       </div>
 
@@ -2159,13 +2159,119 @@
     };
 
     /* =========================================================================
-       11. SỰ KIỆN BÀN PHÍM VẬT LÝ TOÀN CỤC CHO MÀN HÌNH 27 INCH
+       11. SỰ KIỆN BÀN PHÍM VẬT LÝ TOÀN CỤC & BẢNG PHÍM TẮT HỆ THỐNG
        ========================================================================= */
+    function showShortcutCheatsheet() {
+      if (document.getElementById('shortcutCheatModal')) {
+        document.getElementById('shortcutCheatModal').remove();
+        return;
+      }
+      const m = document.createElement('div');
+      m.id = 'shortcutCheatModal';
+      m.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.75);backdrop-filter:blur(4px);z-index:999999;display:flex;align-items:center;justify-content:center;padding:16px;';
+      m.innerHTML = `
+        <div style="background:#fff;border-radius:18px;max-width:760px;width:100%;max-height:90vh;overflow:auto;padding:26px 30px;box-shadow:0 25px 60px rgba(0,0,0,.4);font-family:inherit;position:relative;">
+          <button style="position:absolute;right:18px;top:16px;background:none;border:0;font-size:22px;cursor:pointer;color:#64748b;" onclick="this.closest('#shortcutCheatModal').remove()">✕</button>
+          <h2 style="margin:0 0 16px;font-size:20px;color:#1e3a8a;display:flex;align-items:center;gap:8px;">⌨️ Bảng Phím Tắt Hệ Thống (Phần Học & Anki)</h2>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+            <!-- Phần học bài học -->
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:16px;">
+              <h3 style="margin:0 0 12px;font-size:15px;color:#0f172a;display:flex;align-items:center;gap:6px;">📖 Phần Học Bài Học (6 Pha)</h3>
+              <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.9;color:#334155;">
+                <li><kbd style="background:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:700">Space</kbd>: Nghe phát âm câu / đề bài</li>
+                <li><kbd style="background:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:700">1, 2, 3, 4</kbd>: Chọn thẻ câu (Pha 1) hoặc chọn đáp án</li>
+                <li><kbd style="background:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:700">← / →</kbd>: Chuyển giữa các câu / câu hỏi</li>
+                <li><kbd style="background:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:700">Enter</kbd>: Hoàn thành & Chuyển sang Pha tiếp</li>
+                <li><kbd style="background:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:700">Shift + 1..6</kbd>: Nhảy nhanh tới Pha 1 - Pha 6</li>
+                <li><kbd style="background:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:700">[ / ]</kbd>: Bài học trước / Bài học sau</li>
+                <li><kbd style="background:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:700">A</kbd>: Mở Ôn Tập Từ Vựng Anki Lũy Kế</li>
+                <li><kbd style="background:#e2e8f0;padding:2px 6px;border-radius:4px;font-weight:700">?</kbd>: Mở / Đóng bảng phím tắt này</li>
+              </ul>
+            </div>
+
+            <!-- Phần Anki -->
+            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:16px;">
+              <h3 style="margin:0 0 12px;font-size:15px;color:#1d4ed8;display:flex;align-items:center;gap:6px;">🗂️ Phần Ôn Luyện Anki (Chuẩn Anki)</h3>
+              <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.9;color:#1e3a8a;">
+                <li><b>Mặt trước:</b></li>
+                <li style="margin-left:8px"><kbd style="background:#dbeafe;padding:2px 6px;border-radius:4px;font-weight:700">Space / Enter</kbd>: Lật thẻ xem đáp án</li>
+                <li style="margin-left:8px"><kbd style="background:#dbeafe;padding:2px 6px;border-radius:4px;font-weight:700">R</kbd>: Nghe câu ví dụ</li>
+                <li><b>Mặt sau:</b></li>
+                <li style="margin-left:8px"><kbd style="background:#fee2e2;padding:2px 6px;border-radius:4px;font-weight:700;color:#991b1b">1</kbd>: Again (&lt; 10m) - Học lại</li>
+                <li style="margin-left:8px"><kbd style="background:#ffedd5;padding:2px 6px;border-radius:4px;font-weight:700;color:#9a3412">2</kbd>: Hard - Thẻ khó</li>
+                <li style="margin-left:8px"><kbd style="background:#dcfce7;padding:2px 6px;border-radius:4px;font-weight:700;color:#166534">3 / Space</kbd>: Good - Mặc định</li>
+                <li style="margin-left:8px"><kbd style="background:#dbeafe;padding:2px 6px;border-radius:4px;font-weight:700;color:#1e40af">4</kbd>: Easy - Dễ nhớ</li>
+                <li style="margin-left:8px"><kbd style="background:#dbeafe;padding:2px 6px;border-radius:4px;font-weight:700">R / F5</kbd>: Nghe lại Cả hai (Từ + Câu)</li>
+                <li style="margin-left:8px"><kbd style="background:#dbeafe;padding:2px 6px;border-radius:4px;font-weight:700">W</kbd>: Nghe riêng Từ | <kbd style="background:#dbeafe;padding:2px 6px;border-radius:4px;font-weight:700">S</kbd>: Nghe riêng Câu</li>
+                <li style="margin-left:8px"><kbd style="background:#dbeafe;padding:2px 6px;border-radius:4px;font-weight:700">B</kbd>: Browse duyệt thẻ | <kbd style="background:#dbeafe;padding:2px 6px;border-radius:4px;font-weight:700">Esc</kbd>: Đóng</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div style="text-align:center;margin-top:20px;">
+            <button onclick="this.closest('#shortcutCheatModal').remove()" style="background:#2563eb;color:#fff;border:0;border-radius:99px;padding:8px 30px;font-weight:700;cursor:pointer;">Đã hiểu (Esc)</button>
+          </div>
+        </div>
+      `;
+      m.onclick = (e) => { if (e.target === m) m.remove(); };
+      document.body.appendChild(m);
+    }
+
     window.addEventListener('keydown', e => {
+      // 1. Nếu modal Anki đang mở, nhường quyền hoàn toàn cho Anki
+      if (document.getElementById('ankiModal') && document.getElementById('ankiModal').classList.contains('open')) return;
+
+      const tag = (e.target && e.target.tagName) || '';
+
+      // ?: Mở bảng phím tắt
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        showShortcutCheatsheet();
+        return;
+      }
+
+      // Esc: Đóng bảng phím tắt nếu đang mở
+      const cheatEl = document.getElementById('shortcutCheatModal');
+      if (e.key === 'Escape' && cheatEl) {
+        cheatEl.remove();
+        return;
+      }
+
+      // A: Mở Anki Ôn từ vựng
+      if ((e.key === 'a' || e.key === 'A') && !e.ctrlKey && !e.metaKey && tag !== 'INPUT' && curPhase !== 'p4') {
+        e.preventDefault();
+        if (window.KIDS_ANKI && window.KIDS_ANKI.open) window.KIDS_ANKI.open();
+        return;
+      }
+
+      // Shift + 1..6: Chuyển nhanh giữa 6 Pha
+      if (e.shiftKey && ['1','2','3','4','5','6'].includes(e.key)) {
+        e.preventDefault();
+        selectPhase('p' + e.key);
+        return;
+      }
+
+      // [ và ]: Chuyển bài học lùi / tiến
+      if (e.key === '[' && tag !== 'INPUT') {
+        e.preventDefault();
+        if (curLesIdx > 0) selectLesson(curLesIdx - 1);
+        return;
+      }
+      if (e.key === ']' && tag !== 'INPUT') {
+        e.preventDefault();
+        const curModObj = curStageData && curStageData.modules && curStageData.modules.find(m => m.code === curMod);
+        if (curModObj && curLesIdx < curModObj.lessons.length - 1) selectLesson(curLesIdx + 1);
+        return;
+      }
+
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const les = getLesson();
+      if (!les) return;
 
-      if (e.code === 'Space') {
+      // Space: Phát âm âm thanh
+      if (e.code === 'Space' || e.key === ' ') {
+        if (tag === 'INPUT') return;
         e.preventDefault();
         if (curPhase === 'p1') speakText(les.chunks[activeCardIdx % les.chunks.length].full);
         else if (curPhase === 'p2') speakText(les.chunks[p2Idx % les.chunks.length].full);
@@ -2175,14 +2281,50 @@
         return;
       }
 
+      // Phím mũi tên Trái / Phải
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        if (tag === 'INPUT') return;
+        e.preventDefault();
+        const step = e.key === 'ArrowRight' ? 1 : -1;
+        if (curPhase === 'p1') {
+          const nextIdx = (activeCardIdx + step + les.chunks.length) % les.chunks.length;
+          focusP1Card(nextIdx, les.chunks[nextIdx].full);
+        } else if (curPhase === 'p3') {
+          p3Idx = (p3Idx + step + les.qaList.length) % les.qaList.length;
+          renderWorkspace();
+        } else if (curPhase === 'p6' && examQuestions.length) {
+          examCurIdx = (examCurIdx + step + examQuestions.length) % examQuestions.length;
+          renderWorkspace();
+        }
+        return;
+      }
+
+      // Enter: Chuyển tiếp
+      if (e.key === 'Enter' && tag !== 'INPUT') {
+        e.preventDefault();
+        if (curPhase === 'p1') selectPhase('p2');
+        else if (curPhase === 'p2') selectPhase('p3');
+        else if (curPhase === 'p3') selectPhase('p4');
+        else if (curPhase === 'p4') selectPhase('p5');
+        else if (curPhase === 'p5') selectPhase('p6');
+        return;
+      }
+
+      // Gõ phím ở Pha 4 & Pha 6
       if ((curPhase === 'p4' || curPhase === 'p6') && /^[a-zA-Z]$/.test(e.key)) {
         e.preventDefault();
         handleKeyInput(e.key.toLowerCase());
         return;
       }
 
-      if ((curPhase === 'p2' || curPhase === 'p3' || curPhase === 'p6') && ['1','2','3','4'].includes(e.key)) {
-        const idx = Number(e.key) - 1;
+      // 1, 2, 3, 4: Chọn đáp án hoặc chọn thẻ
+      if (['1','2','3','4'].includes(e.key) && tag !== 'INPUT') {
+        const num = Number(e.key);
+        if (curPhase === 'p1') {
+          if (les.chunks[num - 1]) focusP1Card(num - 1, les.chunks[num - 1].full);
+          return;
+        }
+        const idx = num - 1;
         const prefix = curPhase === 'p2' ? 'p2Opt_' : (curPhase === 'p3' ? 'p3Opt_' : 'exOpt_');
         const btn = document.getElementById(prefix + idx);
         if (btn) btn.click();
@@ -2221,7 +2363,7 @@
       }
     };
   </script>
-  <script src="data/anki_engine.js?v=7"></script>
+  <script src="data/anki_engine.js?v=8"></script>
   <script>try { if (typeof ankiMarkOpened === 'function') ankiMarkOpened(); } catch (e) {}</script>
   <script>
     /* Khai báo cho data/app_kit.js (bộ tiện ích dùng chung, xem docs/upgrade/app_kit.js) */

@@ -563,6 +563,10 @@
     '.anki-def-line { font-size: 16px; color: #1e293b; line-height: 1.55; margin-bottom: 12px; }',
     '.anki-ex-line { font-size: 16px; color: #334155; line-height: 1.55; margin-bottom: 4px; }',
     '.anki-ex-vi { font-size: 14px; color: #64748b; font-style: italic; margin-left: 20px; margin-bottom: 18px; }',
+    '.anki-key-badge { display: inline-block; background: rgba(0,0,0,.07); color: inherit; border: 1px solid rgba(0,0,0,.14); border-radius: 4px; padding: 1px 5px; font-size: 11px; font-weight: 700; font-family: ui-monospace, monospace; margin-left: 5px; vertical-align: middle; }',
+    '.anki-grade-btn .anki-key-badge { background: rgba(255,255,255,.25); border-color: rgba(255,255,255,.4); color: #fff; }',
+    '.anki-audio-mini { background: #e0e7ff; color: #3730a3; border: 0; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 600; cursor: pointer; margin-left: 6px; display: inline-flex; align-items: center; gap: 4px; }',
+    '.anki-audio-mini:hover { background: #c7d2fe; }',
 
     '.anki-cloze-bracket { color: #1d4ed8; font-weight: 700; padding: 0 2px; }',
     '.anki-hl { background: #fef08a; color: #0f172a; padding: 1px 4px; border-radius: 4px; font-weight: 800; }',
@@ -796,9 +800,9 @@
         if (exVi) h += '<div class="anki-ex-vi">(👉 ' + esc(exVi) + ')</div>';
       }
       h += '<div class="anki-audio-row">' +
-        '<button type="button" class="anki-audio-btn" data-play="word">🔊 Từ: ' + esc(w.text) + '</button>' +
-        '<button type="button" class="anki-audio-btn" data-play="ex">🔊 Cả câu</button>' +
-        '<button type="button" class="anki-audio-btn" data-play="all">▶ Đọc cả hai (Từ + Câu)</button>' +
+        '<button type="button" class="anki-audio-btn" data-play="word">🔊 Từ: ' + esc(w.text) + ' <span class="anki-key-badge">W</span></button>' +
+        '<button type="button" class="anki-audio-btn" data-play="ex">🔊 Cả câu <span class="anki-key-badge">S</span></button>' +
+        '<button type="button" class="anki-audio-btn" data-play="all">▶ Đọc cả hai (Từ + Câu) <span class="anki-key-badge">R</span></button>' +
         '</div>';
     }
     h += '</div>';
@@ -817,7 +821,7 @@
 
     // Bottom Footer
     h += '<div class="anki-footer-bar">' +
-      '<button type="button" class="anki-pill-btn" id="ankiEdit">Edit</button>' +
+      '<button type="button" class="anki-pill-btn" id="ankiEdit">Edit <span class="anki-key-badge">E</span></button>' +
       '<div class="anki-center-actions">' +
       '  <div class="anki-counter-line">' +
       '    <span class="c-new">' + c.new + '</span> + ' +
@@ -826,14 +830,14 @@
       '  </div>';
 
     if (session.face === 'front') {
-      h += '<button type="button" class="anki-btn-show" id="ankiShow">Show Answer (Space)</button>';
+      h += '<button type="button" class="anki-btn-show" id="ankiShow">Show Answer <span class="anki-key-badge">Space</span></button>';
     } else {
       var c0 = cards[curKey()] || newCard();
       h += '<div class="anki-grades-grid">' +
-        '<button type="button" class="anki-grade-btn g-again" data-g="1">Again<small>&lt; 10m [1]</small></button>' +
-        '<button type="button" class="anki-grade-btn g-hard" data-g="2">Hard<small>' + intervalLabel(c0, 2) + ' [2]</small></button>' +
-        '<button type="button" class="anki-grade-btn g-good" data-g="3">Good<small>' + intervalLabel(c0, 3) + ' [3]</small></button>' +
-        '<button type="button" class="anki-grade-btn g-easy" data-g="4">Easy<small>' + intervalLabel(c0, 4) + ' [4]</small></button>' +
+        '<button type="button" class="anki-grade-btn g-again" data-g="1">Again<small>&lt; 10m</small><span class="anki-key-badge">1</span></button>' +
+        '<button type="button" class="anki-grade-btn g-hard" data-g="2">Hard<small>' + intervalLabel(c0, 2) + '</small><span class="anki-key-badge">2</span></button>' +
+        '<button type="button" class="anki-grade-btn g-good" data-g="3">Good<small>' + intervalLabel(c0, 3) + '</small><span class="anki-key-badge">3 / Space</span></button>' +
+        '<button type="button" class="anki-grade-btn g-easy" data-g="4">Easy<small>' + intervalLabel(c0, 4) + '</small><span class="anki-key-badge">4</span></button>' +
         '</div>';
     }
     h += '</div>' +
@@ -979,15 +983,24 @@
     if (!session || !modalEl || !modalEl.classList.contains('open')) return;
     var tag = (e.target && e.target.tagName) || '';
 
+    // ESC: Đóng modal
     if (e.key === 'Escape') {
       closeSession();
       return;
     }
 
-    if (session.mode === 'browse') return;
+    if (session.mode === 'browse') {
+      if (e.key === 'b' || e.key === 'B' || e.key === 'Escape') {
+        e.preventDefault();
+        openSession();
+      }
+      return;
+    }
 
-    if (e.key === 'r' || e.key === 'R') {
-      var w = curWord();
+    var w = curWord();
+
+    // R hoặc F5: Phát lại toàn bộ chuỗi âm thanh (Từ + Câu)
+    if (e.key === 'r' || e.key === 'R' || e.key === 'F5') {
       if (w) {
         e.preventDefault();
         playWordAndSentence(w);
@@ -995,11 +1008,55 @@
       return;
     }
 
+    // W: Nghe riêng Từ vựng (Word)
+    if ((e.key === 'w' || e.key === 'W') && tag !== 'INPUT') {
+      if (w) {
+        e.preventDefault();
+        stopAnkiAudio();
+        playAudioItem(w.text);
+      }
+      return;
+    }
+
+    // S: Nghe riêng Câu ví dụ (Sentence)
+    if ((e.key === 's' || e.key === 'S') && tag !== 'INPUT') {
+      if (w && w.ex && (w.ex.t || w.ex.en)) {
+        e.preventDefault();
+        stopAnkiAudio();
+        playAudioItem(w.ex.t || w.ex.en);
+      }
+      return;
+    }
+
+    // E: Edit / xem thông tin thẻ
+    if ((e.key === 'e' || e.key === 'E') && tag !== 'INPUT') {
+      if (w) {
+        e.preventDefault();
+        alert('Thẻ: ' + w.text + '\nNghĩa: ' + w.vi + '\nBài: ' + w.lesson);
+      }
+      return;
+    }
+
+    // B: Mở duyệt thẻ
+    if ((e.key === 'b' || e.key === 'B') && tag !== 'INPUT') {
+      e.preventDefault();
+      openBrowse();
+      return;
+    }
+
     if (session.face === 'front') {
       if (tag === 'INPUT') {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          var inp = modalEl.querySelector('#ankiTyped');
+          if (inp) session.typed = inp.value;
+          revealAnswer();
+          return;
+        }
         if ((e.key === ' ' || e.code === 'Space') && !e.target.value.trim()) {
           e.preventDefault();
           revealAnswer();
+          return;
         }
         return;
       }
@@ -1008,7 +1065,7 @@
         revealAnswer();
       }
     } else {
-      // Mặt sau
+      // Mặt sau: 1 Again, 2 Hard, 3 Good, 4 Easy, Space/Enter Good
       if (/^[1-4]$/.test(e.key)) {
         e.preventDefault();
         grade(parseInt(e.key, 10));
