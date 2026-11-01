@@ -901,7 +901,11 @@
 
   K.register(function () {
     build();
-    var detail = /^#detail/.test(root.location.hash || '');
-    if (detail) { setView('detail'); } else { renderHome(); setView('home'); }
+    function syncHash() {
+      var detail = /^#detail/.test(root.location.hash || '');
+      if (detail) { setView('detail'); } else { renderHome(); setView('home'); }
+    }
+    syncHash();
+    root.addEventListener('hashchange', syncHash);
   });
 })(window);
