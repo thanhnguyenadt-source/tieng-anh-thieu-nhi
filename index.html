@@ -1132,9 +1132,15 @@
       ankiMarkOpened();
     }
 
-    /* Anki lũy kế: ghi nhận bài đã mở (data/anki_engine.js nạp sau nên kiểm tra tồn tại) */
+    /* Anki lũy kế: ghi nhận bài đã mở và cập nhật bảng Anki */
     function ankiMarkOpened() {
-      try { const l = getLesson(); if (l && window.KIDS_ANKI) window.KIDS_ANKI.markOpened(l.id); } catch (e) {}
+      try {
+        const l = getLesson();
+        if (l && window.KIDS_ANKI) {
+          window.KIDS_ANKI.markOpened(l.id);
+          if (typeof window.KIDS_ANKI.refresh === 'function') window.KIDS_ANKI.refresh();
+        }
+      } catch (e) {}
     }
 
     function selectModule(m) {
@@ -2215,7 +2221,7 @@
       }
     };
   </script>
-  <script src="data/anki_engine.js"></script>
+  <script src="data/anki_engine.js?v=6"></script>
   <script>try { if (typeof ankiMarkOpened === 'function') ankiMarkOpened(); } catch (e) {}</script>
   <script>
     /* Khai báo cho data/app_kit.js (bộ tiện ích dùng chung, xem docs/upgrade/app_kit.js) */

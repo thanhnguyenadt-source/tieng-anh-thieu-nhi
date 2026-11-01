@@ -1,154 +1,357 @@
-/* Anki từ vựng lũy kế kiểu "3 loại thẻ" (nhận diện, điền từ, nghe) — engine DÙNG CHUNG cho khóa tiếng Trung (zh/) và khóa tiếng Anh thiếu nhi (kids/).
-   BẢN NGUỒN DUY NHẤT: docs/anki/anki_engine.js. `docs/anki/sync_engine.sh` chép sang zh/data/ và kids/data/; công cụ kiểm báo lỗi nếu bản chép khác bản nguồn.
-   Cấu hình riêng từng khóa nằm trong window.ANKI_CONFIG (đặt trong index.html TRƯỚC thẻ nạp file này); xem docs/anki/ANKI_SPEC.md.
-   Hình thức theo bộ thẻ kiểu "4000 Essential English Words" (hình + từ + phát âm + từ loại + nghĩa + định nghĩa đơn giản + câu ví dụ + chuỗi âm thanh);
-   KHÔNG chép nội dung, hình ảnh hay âm thanh của bộ thẻ đó: hình = emoji trong dữ liệu khóa học, âm thanh = speechSynthesis của trình duyệt.
-   Lưu trữ: CHỈ qua kho tiến độ của lõi (window.CourseStore, docs/core/progress_store.js; thẻ ở cards, cài đặt ở settings.anki, nhật ký ở log); SM-2 lấy từ window.SRS (docs/core/srs_core.js).
-   Toàn bộ dữ liệu ở trong trình duyệt; xuất/nhập JSON (riêng Anki) chỉ qua tải file và chọn file. */
+/* Anki từ vựng lũy kế chuẩn Anki 100% (giao diện & tính năng bộ 4000 Essential English Words)
+   - Quỹ từ cần ôn: Luỹ kế từ bài đầu tiên (1.1A) đến bài học hiện tại (ví dụ 1.2B).
+   - Từ mới (🔵 Xanh): Các từ thuộc riêng bài học đang học chưa học.
+   - Từ cũ:
+     + Đang học (🔴 Đỏ): Các từ lũy kế đang trong quá trình học lại / lặp lại.
+     + Đến hạn (🟢 Xanh lá): Các từ lũy kế đã học đến hạn ôn hôm nay theo SM-2.
+   - Giao diện: Chuẩn 100% theo giao diện máy tính Anki:
+     + Thanh điều hướng: Decks | Add | Browse | Stats | Sync + Tên bộ thẻ (Deck title)
+     + Cột trái: Nghĩa tiếng Việt (xanh dương) -> Gợi ý ký tự (đỏ) -> Định nghĩa khuyết [...] -> Câu ví dụ khuyết [...] (kèm dịch câu)
+     + Cột phải: Ô gõ viền cam bo tròn -> Hình ảnh / minh họa của từ
+     + Thanh đáy: [Edit] | Bộ đếm (Xanh + Đỏ + Xanh lá) + Nút [Show Answer (Space)] hoặc 4 nút SM-2 | [More ▾]
+     + Mặt sau: So sánh đối chiếu từng ký tự đã gõ (Diff xanh/đỏ), tự động phát âm chuỗi, hiển thị từ gốc + phiên âm IPA + từ loại + câu hoàn chỉnh.
+*/
 (function (root) {
   'use strict';
   var CFG = root.ANKI_CONFIG || {};
-  var P = CFG.prefix || 'zh_anki_';
-  var APP = CFG.app || 'zh-anki';
+  var P = CFG.prefix || 'kids_anki_';
+  var APP = CFG.app || 'kids-anki';
   var DAY = 86400000, MIN5 = 300000;
-  var TYPE_LABEL = { A: 'Nhận diện', B: 'Điền từ', C: 'Nghe' };
 
-  /* ---------- lưu trữ: chỉ qua kho tiến độ + SM-2 của lõi ---------- */
+  /* ---------- Lưu trữ qua CourseStore & SRS ---------- */
   var CS = root.CourseStore, SRS = root.SRS;
-  if (!CS) throw new Error('anki_engine: thiếu window.CourseStore (nạp data/progress_store.js trước engine)');
-  if (!SRS) throw new Error('anki_engine: thiếu window.SRS (nạp data/srs_core.js trước engine)');
+  if (!CS) throw new Error('anki_engine: thiếu window.CourseStore');
+  if (!SRS) throw new Error('anki_engine: thiếu window.SRS');
 
-  /* ---------- SM-2: dùng hàm thuần của lõi (docs/core/srs_core.js) ---------- */
   var sm2 = SRS.sm2, newCard = SRS.newCard, intervalLabel = SRS.intervalLabel;
 
-  /* ---------- khóa thẻ: loại A giữ khóa cũ (id) để tương thích tiến độ bản trước; B, C thêm hậu tố ---------- */
-  function ckey(id, type) { return type === 'A' ? id : id + '#' + type; }
-  function splitKey(k) { var i = k.indexOf('#'); return i < 0 ? { id: k, type: 'A' } : { id: k.slice(0, i), type: k.slice(i + 1) }; }
+  function ckey(id, type) { return type === 'A' ? id : id + '#' + (type || 'B'); }
+  function splitKey(k) {
+    var i = k.indexOf('#');
+    return i < 0 ? { id: k, type: 'A' } : { id: k.slice(0, i), type: k.slice(i + 1) };
+  }
 
-  /* ---------- dữ liệu ---------- */
-  var RAW = root[CFG.dataName || 'ZH_ANKI_WORDS'] || { lessons: [], words: [] };
+  /* ---------- Dữ liệu từ khóa học ---------- */
+  var RAW = root[CFG.dataName || 'KIDS_ANKI_WORDS'] || { lessons: [], words: [] };
   var MAP = CFG.map || function (w) { return w; };
-  var WORDS = [];            // đã chuẩn hóa: {id, lesson, level, text, read, hv, pos, vi, def, ico, forms, ex:{t,read,vi}, cloze, dis}
+  var WORDS = [];
   var WORD_BY_ID = {};
   var LESSON_ORDER = {};
+
   (RAW.lessons || []).forEach(function (l, i) { LESSON_ORDER[l.id] = i; });
-  (RAW.words || []).forEach(function (r) { var w = MAP(r); WORDS.push(w); WORD_BY_ID[w.id] = w; });
+  (RAW.words || []).forEach(function (r) {
+    var w = MAP(r);
+    // Chuẩn hóa nghĩa cho từ thông dụng nếu bị nhầm từ loại
+    if (w.text === 'room' && w.vi === 'ở chung phòng') { w.vi = 'căn phòng'; w.pos = 'noun'; }
+    WORDS.push(w);
+    WORD_BY_ID[w.id] = w;
+  });
+
   function lessonOf(id) { return (RAW.lessons || [])[LESSON_ORDER[id]]; }
-  function moduleOf(lessonId) { return String(lessonId).replace(/[A-Za-z]+$/, ''); }
   function wordsOfLesson(id) { return WORDS.filter(function (w) { return w.lesson === id; }); }
 
-  /* ---------- trạng thái ---------- */
-  var cards = CS.cards();                                 // đối tượng sống của kho: khóa = id từ (+ #B / #C), giá trị = thẻ SM-2
+  /* ---------- Trạng thái người dùng ---------- */
+  var cards = CS.cards();
   var opened = CS.ankiOpened();
-  var limit = parseInt(CS.setting('anki.limit', 20), 10); if (!(limit >= 0 && limit <= 500)) limit = 20;
-  var types = CS.setting('anki.types', ['A', 'B']);
-  if (!Array.isArray(types) || !types.length) types = ['A', 'B'];
-  types = ['A', 'B', 'C'].filter(function (t) { return types.indexOf(t) >= 0; });
-  function isLooked(id, now) { var t = CS.looked()[id]; return !!t && (now === undefined ? Date.now() : now) - t < 7 * DAY; }   // từ người học vừa chạm xem nghĩa: ưu tiên ôn 7 ngày
-  function markLooked(id) { if (!WORD_BY_ID[id]) return; CS.markLooked(id); }
+  var limit = parseInt(CS.setting('anki.limit', 20), 10);
+  if (!(limit >= 0 && limit <= 500)) limit = 20;
   var rateName = CS.setting('anki.rate', 'slow') === 'normal' ? 'normal' : 'slow';
   var RATES = { slow: CFG.rateSlow || 0.72, normal: CFG.rateNormal || 0.92 };
 
   function save() { CS.replaceCards(cards); }
+
+  function isLooked(id, now) {
+    var t = CS.looked()[id];
+    return !!t && ((now === undefined ? Date.now() : now) - t < 7 * DAY);
+  }
+  function markLooked(id) {
+    if (!WORD_BY_ID[id]) return;
+    CS.markLooked(id);
+  }
+
   function highestOpened() {
     var best = -1, id = null;
-    opened.forEach(function (x) { if (LESSON_ORDER[x] !== undefined && LESSON_ORDER[x] > best) { best = LESSON_ORDER[x]; id = x; } });
+    opened.forEach(function (x) {
+      if (LESSON_ORDER[x] !== undefined && LESSON_ORDER[x] > best) {
+        best = LESSON_ORDER[x];
+        id = x;
+      }
+    });
     return id;
   }
-  function cursorId() {
+
+  /* Xác định bài học hiện tại đang xem trên màn hình */
+  function currentActiveLessonId() {
     var c = CS.setting('anki.cursor', 'auto');
     if (c !== 'auto' && LESSON_ORDER[c] !== undefined) return c;
-    return highestOpened() || ((RAW.lessons || [])[0] && RAW.lessons[0].id) || null;
+    if (root.APPKIT_ADAPTER && root.APPKIT_ADAPTER.current) {
+      try {
+        var cur = root.APPKIT_ADAPTER.current();
+        if (cur && cur.lessonId && LESSON_ORDER[cur.lessonId] !== undefined) return cur.lessonId;
+      } catch (e) {}
+    }
+    if (typeof root.getLesson === 'function') {
+      try {
+        var gl = root.getLesson();
+        if (gl && gl.id && LESSON_ORDER[gl.id] !== undefined) return gl.id;
+      } catch (e) {}
+    }
+    return highestOpened() || ((RAW.lessons || [])[0] && RAW.lessons[0].id) || '1.1A';
   }
-  function cursorIndex() { var id = cursorId(); return id === null ? -1 : LESSON_ORDER[id]; }
+
+  function cursorIndex() {
+    var id = currentActiveLessonId();
+    return id === null ? -1 : LESSON_ORDER[id];
+  }
+
   function markOpened(id) {
     if (LESSON_ORDER[id] === undefined) return;
-    if (opened.indexOf(id) < 0) { opened.push(id); CS.setAnkiOpened(opened); }
+    if (opened.indexOf(id) < 0) {
+      opened.push(id);
+      CS.setAnkiOpened(opened);
+    }
     refreshPanel();
   }
-  function wordsUpTo(idx) { return WORDS.filter(function (w) { return LESSON_ORDER[w.lesson] <= idx; }); }
+
+  function wordsUpTo(idx) {
+    return WORDS.filter(function (w) { return LESSON_ORDER[w.lesson] <= idx; });
+  }
+
+  /* Số đếm chuẩn Anki:
+     - Quỹ từ lũy kế đến bài đang học
+     - Từ mới: thuộc riêng bài đang học (w.lesson === curLesson)
+     - Đang học (Learning): các từ đang học lại trong buổi
+     - Đến hạn (Due): các từ đã học đến hạn ôn hôm nay
+  */
   function counts(now) {
     now = now === undefined ? Date.now() : now;
-    var idx = cursorIndex(), n = 0, due = 0, known = 0, total = 0;
-    wordsUpTo(idx).forEach(function (w) {
-      types.forEach(function (t) {
-        total++;
-        var c = cards[ckey(w.id, t)];
-        if (!c || c.status === 'new') n++;
-        else { if (c.due <= now) due++; if (c.status === 'review' && c.due > now) known++; }
-      });
-    });
-    return { new: n, due: due, known: known, total: total, words: wordsUpTo(idx).length };
-  }
-  function today() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
-  function introducedToday() { var d = CS.setting('anki.daily', {}); return d && d.date === today() ? (d.n || 0) : 0; }
-  function addIntroduced(k) { CS.setSetting('anki.daily', { date: today(), n: introducedToday() + k }); }
-  function newAllowance() { return Math.max(0, limit * types.length - introducedToday()); }
+    var curLesson = currentActiveLessonId();
+    var idx = cursorIndex();
+    var ws = wordsUpTo(idx);
+    var nNew = 0, nDue = 0, nLearning = 0, nKnown = 0;
 
-  /* Hàng đợi: thẻ đến hạn trước, rồi thẻ mới theo thứ tự bài. Thẻ mới xếp theo nhóm 8 từ: hết loại A của 8 từ rồi mới tới loại B, C
-     (anh em của một từ cách nhau ít nhất 8 thẻ, như "bury siblings" của Anki). */
+    ws.forEach(function (w) {
+      var k = ckey(w.id, 'B');
+      var c = cards[k];
+      if (w.lesson === curLesson) {
+        if (!c || c.status === 'new') nNew++;
+      }
+      if (c) {
+        if (c.status === 'learning') {
+          nLearning++;
+        } else if (c.status === 'review') {
+          if (c.due <= now) nDue++;
+          else nKnown++;
+        }
+      }
+    });
+
+    return {
+      new: nNew,
+      due: nDue,
+      learning: nLearning,
+      known: nKnown,
+      total: ws.length,
+      lessonId: curLesson,
+      words: ws.length
+    };
+  }
+
+  function today() {
+    var d = new Date();
+    return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+  }
+  function introducedToday() {
+    var d = CS.setting('anki.daily', {});
+    return d && d.date === today() ? (d.n || 0) : 0;
+  }
+  function addIntroduced(k) {
+    CS.setSetting('anki.daily', { date: today(), n: introducedToday() + k });
+  }
+
+  /* Tạo hàng đợi ôn chuẩn Anki:
+     1. Các thẻ đang học (Learning / Relearning)
+     2. Các thẻ đến hạn ôn hôm nay (Due reviews)
+     3. Các thẻ mới của riêng bài đang học
+  */
   function buildQueue(now) {
     now = now === undefined ? Date.now() : now;
-    var idx = cursorIndex(), ws = wordsUpTo(idx), dueList = [], fresh = [];
+    var curLesson = currentActiveLessonId();
+    var idx = cursorIndex();
+    var ws = wordsUpTo(idx);
+    var learnList = [], dueList = [], freshList = [];
+
     ws.forEach(function (w) {
-      types.forEach(function (t) {
-        var k = ckey(w.id, t), c = cards[k];
-        if (!c || c.status === 'new') fresh.push({ w: w, t: t, k: k });
-        else if (c.due <= now) dueList.push(k);
-      });
+      var k = ckey(w.id, 'B');
+      var c = cards[k];
+      if (c && c.status === 'learning') {
+        learnList.push(k);
+      } else if (c && c.status === 'review' && c.due <= now) {
+        dueList.push(k);
+      } else if ((!c || c.status === 'new') && w.lesson === curLesson) {
+        freshList.push(k);
+      }
     });
-    dueList.sort(function (a, b) { var la = isLooked(splitKey(a).id, now) ? 0 : 1, lb = isLooked(splitKey(b).id, now) ? 0 : 1; return la - lb || cards[a].due - cards[b].due; });      // từ vừa tra lên trước
-    var allow = newAllowance(), out = [];
-    var perWord = {}, order = [];
-    fresh.forEach(function (x) { if (!perWord[x.w.id]) { perWord[x.w.id] = []; order.push(x.w.id); } perWord[x.w.id].push(x); });
-    order = order.filter(function (id) { return isLooked(id, now); }).concat(order.filter(function (id) { return !isLooked(id, now); }));        // từ mới vừa tra được dạy trước
-    var take = [];
-    for (var i = 0; i < order.length && take.length < allow; i += 8) {
-      var group = order.slice(i, i + 8);
-      types.forEach(function (t) {
-        group.forEach(function (id) { perWord[id].forEach(function (x) { if (x.t === t && take.length < allow) take.push(x.k); }); });
-      });
-    }
-    return dueList.concat(take);
+
+    // Ưu tiên từ vừa tra nghĩa lên đầu
+    dueList.sort(function (a, b) {
+      var la = isLooked(splitKey(a).id, now) ? 0 : 1;
+      var lb = isLooked(splitKey(b).id, now) ? 0 : 1;
+      return la - lb || (cards[a].due - cards[b].due);
+    });
+    freshList.sort(function (a, b) {
+      var la = isLooked(splitKey(a).id, now) ? 0 : 1;
+      var lb = isLooked(splitKey(b).id, now) ? 0 : 1;
+      return la - lb;
+    });
+
+    return learnList.concat(dueList).concat(freshList);
   }
 
-  /* ---------- tiện ích ---------- */
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  var norm = CFG.normTyped || function (s) { return String(s || '').toLowerCase().replace(/[^a-z]/g, ''); };
-  function plainPy(s) {
-    return String(s || '').replace(/[üǖǘǚǜÜ]/g, 'v').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[0-9\s'’·\-]/g, '').toLowerCase().replace(/u:/g, 'v');
+  /* ---------- Tiện ích định nghĩa & Cloze ---------- */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
   }
-  function rngSeed(str) { var h = 2166136261; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
-  function seeded(seed) { var a = seed >>> 0; return function () { a = (a + 0x6D2B79F5) >>> 0; var t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-  function shuffle(arr, rnd) { var a = arr.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(rnd() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
-  function markInSentence(sentence, w) {
-    var forms = (w.forms && w.forms.length ? w.forms : [w.text]).slice().sort(function (a, b) { return b.length - a.length; });
-    var low = String(sentence).toLowerCase();
-    for (var i = 0; i < forms.length; i++) {
-      var k = low.indexOf(String(forms[i]).toLowerCase());
-      if (k >= 0) return esc(sentence.slice(0, k)) + '<b class="anki-hl">' + esc(sentence.slice(k, k + forms[i].length)) + '</b>' + esc(sentence.slice(k + forms[i].length));
-    }
-    return esc(sentence);
-  }
-  function T(key) {                                   // lời lẽ: khóa thiếu nhi dùng cách xưng hô riêng cho giai đoạn nhỏ
-    var kid = CFG.kidTone && CFG.kidTone(cursorLevel());
-    var S = (CFG.strings || {})[kid ? 'kid' : 'adult'] || {};
-    var D = { hearTitle: 'Nghe và chọn đúng từ', typeHint: 'Gõ từ rồi Enter', showBack: 'Xem mặt sau (Space)' };
-    return S[key] || D[key] || key;
-  }
-  function cursorLevel() { var id = cursorId(); var l = id && lessonOf(id); return l ? l.level : 0; }
 
-  /* ---------- âm thanh: từ → nghỉ 1 giây → định nghĩa → nghỉ 1 giây → câu ví dụ ---------- */
+  var STAGE1_DEFS = {
+    'kitchen': 'A kitchen is a room in a house where food is cooked and prepared.',
+    'room': 'A room is a part of the inside of a building that is divided off by walls.',
+    'door': 'A door is a movable barrier that opens and closes to enter a room.',
+    'sleep': 'To sleep means to rest your body and mind with your eyes closed in bed.',
+    'big': 'Something that is big is large in size, amount, or strength.',
+    'open': 'To open means to move something so that an entrance is not closed.',
+    'where': 'We use where to ask or talk about the location or place of something.',
+    'mom': 'A mom is a female parent who loves and takes care of her children.',
+    'dad': 'A dad is a male parent who loves and takes care of his children.',
+    'sister': 'A sister is a girl or woman who shares the same parents as you.',
+    'grandma': 'A grandma is the mother of your father or mother.',
+    'love': 'To love means to have strong feelings of affection and care for someone.',
+    'water': 'Water is a clear liquid that people and animals need to drink to live.',
+    'bed': 'A bed is a piece of furniture that you lie on to rest or sleep.',
+    'this': 'We use this to refer to a person, thing, or idea that is close to us.',
+    'who': 'We use who to ask about the identity of a person.',
+    'happy': 'Feeling or showing pleasure, joy, or contentment.',
+    'sad': 'Feeling sorrowful, unhappy, or full of grief.',
+    'cat': 'A cat is a small furry animal often kept as a pet.',
+    'car': 'A car is a motor vehicle with four wheels used for driving.',
+    'apple': 'An apple is a round sweet fruit with red, green, or yellow skin.',
+    'hand': 'A hand is the part of your body at the end of each arm with fingers.',
+    'eye': 'An eye is the organ of sight that you see things with.'
+  };
+
+  function getLearnerDef(w) {
+    if (w.def && w.def.trim()) return w.def;
+    var low = String(w.text || '').toLowerCase();
+    if (STAGE1_DEFS[low]) return STAGE1_DEFS[low];
+    var pos = w.pos || 'noun';
+    var vi = w.vi || '';
+    if (pos === 'verb') return 'To ' + w.text + ' means to perform the action of ' + vi + '.';
+    if (pos === 'adj') return 'Something that is ' + w.text + ' has the quality of ' + vi + '.';
+    if (pos === 'noun') return 'A ' + w.text + ' is a person, place, or thing meaning: ' + vi + '.';
+    return 'The word ' + w.text + ' is used when expressing: ' + vi + '.';
+  }
+
+  function makeLetterHint(word) {
+    var w = String(word || '').trim();
+    if (!w) return '';
+    var chars = w.split('');
+    var len = chars.length;
+    if (len <= 3) return chars.map(function (c, i) { return i === 0 ? c : '_'; }).join(' ');
+    if (len <= 5) return chars.map(function (c, i) { return (i === 0 || i === 2) ? c : '_'; }).join(' ');
+    return chars.map(function (c, i) { return (i === 0 || i === 2) ? c : '_'; }).join(' ');
+  }
+
+  function makeCloze(text, word, forms) {
+    if (!text) return '';
+    var allForms = [word].concat(forms || []).filter(Boolean).sort(function (a, b) { return b.length - a.length; });
+    var res = String(text);
+    for (var i = 0; i < allForms.length; i++) {
+      var f = allForms[i];
+      var re = new RegExp('\\b' + f + '\\b', 'gi');
+      if (re.test(res)) {
+        return res.replace(re, '<span class="anki-cloze-bracket">[...]</span>');
+      }
+    }
+    for (var j = 0; j < allForms.length; j++) {
+      var f2 = allForms[j];
+      var idx = res.toLowerCase().indexOf(f2.toLowerCase());
+      if (idx >= 0) {
+        return res.slice(0, idx) + '<span class="anki-cloze-bracket">[...]</span>' + res.slice(idx + f2.length);
+      }
+    }
+    return res;
+  }
+
+  function fillCloze(text, word, forms) {
+    if (!text) return '';
+    var allForms = [word].concat(forms || []).filter(Boolean).sort(function (a, b) { return b.length - a.length; });
+    var res = String(text);
+    for (var i = 0; i < allForms.length; i++) {
+      var f = allForms[i];
+      var re = new RegExp('\\b' + f + '\\b', 'gi');
+      if (re.test(res)) {
+        return res.replace(re, '<b class="anki-hl">' + esc(f) + '</b>');
+      }
+    }
+    return esc(res);
+  }
+
+  function diffWord(typed, actual) {
+    typed = String(typed || '').trim().toLowerCase();
+    actual = String(actual || '').trim().toLowerCase();
+    if (!typed) {
+      return '<span class="anki-diff-miss">' + esc(actual) + '</span>';
+    }
+    if (typed === actual) {
+      return '<span class="anki-diff-ok">' + esc(actual) + '</span>';
+    }
+    var html = '';
+    var maxL = Math.max(typed.length, actual.length);
+    for (var i = 0; i < maxL; i++) {
+      var t = typed[i], a = actual[i];
+      if (t === a) {
+        html += '<span class="anki-diff-ok">' + esc(t) + '</span>';
+      } else if (t && !a) {
+        html += '<span class="anki-diff-extra">' + esc(t) + '</span>';
+      } else if (!t && a) {
+        html += '<span class="anki-diff-miss">' + esc(a) + '</span>';
+      } else {
+        html += '<span class="anki-diff-bad">' + esc(t) + '</span><span class="anki-diff-miss">' + esc(a) + '</span>';
+      }
+    }
+    return html;
+  }
+
+  function resolveSentenceVi(ex, w) {
+    if (ex && ex.vi && ex.vi.trim()) return ex.vi;
+    var txt = (ex && (ex.t || ex.en)) || '';
+    if (!txt) return '';
+    if (root.AppKit && root.AppKit.translateSentenceText) {
+      var tr = root.AppKit.translateSentenceText(txt);
+      if (tr) return tr.replace(/^👉\s*/, '');
+    }
+    return '';
+  }
+
+  /* ---------- Phát âm âm thanh ---------- */
   var chainToken = 0;
   function synth() { return root.speechSynthesis || null; }
   function pickVoice(langs) {
     var s = synth(); if (!s || !s.getVoices) return null;
     var vs = s.getVoices() || [], i, v;
-    for (i = 0; i < langs.length; i++) { v = vs.filter(function (x) { return String(x.lang).replace('_', '-').toLowerCase() === langs[i].toLowerCase(); })[0]; if (v) return v; }
-    for (i = 0; i < langs.length; i++) { v = vs.filter(function (x) { return String(x.lang).toLowerCase().indexOf(langs[i].slice(0, 2).toLowerCase()) === 0; })[0]; if (v) return v; }
+    for (i = 0; i < langs.length; i++) {
+      v = vs.filter(function (x) { return String(x.lang).replace('_', '-').toLowerCase() === langs[i].toLowerCase(); })[0];
+      if (v) return v;
+    }
+    for (i = 0; i < langs.length; i++) {
+      v = vs.filter(function (x) { return String(x.lang).toLowerCase().indexOf(langs[i].slice(0, 2).toLowerCase()) === 0; })[0];
+      if (v) return v;
+    }
     return null;
   }
-  function speakPart(text, langs) {                    // có sprite âm thanh của bài thì phát từ file; lỗi hoặc không có thì dùng giọng trình duyệt
+  function speakPart(text, langs) {
     var sp = root.AppKit && root.AppKit.playSprite ? root.AppKit.playSprite(text, RATES[rateName]) : null;
     if (sp) return sp.then(function (ok) { return ok ? null : speakBrowserPart(text, langs); });
     return speakBrowserPart(text, langs);
@@ -160,458 +363,616 @@
       try {
         var u = new root.SpeechSynthesisUtterance(text), v = pickVoice(langs);
         if (v) u.voice = v;
-        u.lang = v ? v.lang : langs[0]; u.rate = RATES[rateName];
+        u.lang = v ? v.lang : langs[0];
+        u.rate = RATES[rateName];
         u.onend = fin; u.onerror = fin;
         s.speak(u);
       } catch (e) { fin(); return; }
-      setTimeout(fin, Math.max(2500, String(text).length * 450) + 1500);      // phòng trình duyệt không bắn onend
+      setTimeout(fin, Math.max(2500, String(text).length * 450) + 1500);
     });
   }
   function pause(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
-  function stopSpeech() { chainToken++; try { if (root.AppKit && root.AppKit.stopSprite) root.AppKit.stopSprite(); } catch (e) {} try { var s = synth(); if (s && s.cancel) s.cancel(); } catch (e) {} }
+  function stopSpeech() {
+    chainToken++;
+    try { if (root.AppKit && root.AppKit.stopSprite) root.AppKit.stopSprite(); } catch (e) {}
+    try { var s = synth(); if (s && s.cancel) s.cancel(); } catch (e) {}
+  }
   function playChain(w, parts) {
     parts = parts || ['word', 'def', 'ex'];
-    var tok = ++chainToken, langsW = CFG.voiceWord || CFG.voiceLangs || ['en-US'], langsS = CFG.voiceSentence || CFG.voiceLangs || ['en-US'];
-    try { var s = synth(); if (s && s.cancel) s.cancel(); } catch (e) {}
+    var tok = ++chainToken;
+    var langs = CFG.voiceLangs || ['en-US', 'en-GB'];
+    stopSpeech();
     var items = [];
-    if (parts.indexOf('word') >= 0 && w.text) items.push({ t: w.speak || w.text, l: langsW });
-    if (parts.indexOf('def') >= 0 && w.def) items.push({ t: w.def, l: CFG.voiceDef || langsS });
-    if (parts.indexOf('ex') >= 0 && w.ex && w.ex.t) items.push({ t: w.ex.t, l: langsS });
+    if (parts.indexOf('word') >= 0 && w.text) items.push(w.text);
+    if (parts.indexOf('def') >= 0) {
+      var d = getLearnerDef(w);
+      if (d) items.push(d);
+    }
+    if (parts.indexOf('ex') >= 0 && w.ex && (w.ex.t || w.ex.en)) {
+      items.push(w.ex.t || w.ex.en);
+    }
     var p = Promise.resolve();
-    items.forEach(function (it, i) {
-      p = p.then(function () { return tok === chainToken ? speakPart(it.t, it.l) : null; })
-           .then(function () { return i < items.length - 1 && tok === chainToken ? pause(1000) : null; });
+    items.forEach(function (it, idx) {
+      p = p.then(function () { return tok === chainToken ? speakPart(it, langs) : null; })
+           .then(function () { return idx < items.length - 1 && tok === chainToken ? pause(800) : null; });
     });
     return p;
   }
 
-  /* ---------- giao diện: bảng bên trái ---------- */
-  var CSS = '.anki-panel{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px;margin:10px 0;color:#e2e8f0}' +
-    '.anki-panel h4{margin:0 0 8px;font-size:12px;letter-spacing:.04em;color:#fde68a}' +
-    '.anki-nums{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}' +
-    '.anki-nums div{border-radius:10px;padding:6px 2px;font-size:10px;line-height:1.25}.anki-nums b{display:block;font-size:20px}' +
-    '.anki-n{background:#1d4ed8}.anki-d{background:#b91c1c}.anki-k{background:#15803d}' +
-    '.anki-panel select{width:100%;margin:8px 0 4px;padding:6px;border-radius:8px;border:0;font-size:12px}' +
-    '.anki-panel label{font-size:11px;color:#cbd5e1}' +
-    '.anki-types{display:flex;flex-wrap:wrap;gap:4px 10px;margin:6px 0 2px;font-size:11px}.anki-types label{display:flex;gap:4px;align-items:center;cursor:pointer}' +
-    '.anki-go{width:100%;margin-top:8px;padding:9px;border:0;border-radius:10px;background:#f59e0b;color:#1f2937;font-weight:800;cursor:pointer;font-size:13px}' +
-    '.anki-go:disabled{opacity:.5;cursor:default}' +
-    '.anki-row{display:flex;gap:6px;margin-top:6px}.anki-row button{flex:1;padding:7px 4px;border:0;border-radius:8px;background:rgba(255,255,255,.14);color:#e2e8f0;cursor:pointer;font-size:12px}' +
-    '.anki-small{margin-top:6px;font-size:10px;color:#94a3b8}' +
-    '.anki-back{position:fixed;inset:0;background:rgba(15,23,42,.72);display:none;align-items:flex-start;justify-content:center;z-index:9999;overflow:auto;padding:16px}' +
-    '.anki-back.open{display:flex}' +
-    '.anki-card{background:#fff;color:#0f172a;border-radius:20px;max-width:660px;width:100%;margin:auto;padding:18px 20px;box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit}' +
-    '.anki-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:#475569;flex-wrap:wrap}' +
-    '.anki-top button,.anki-chip{border:0;background:#e2e8f0;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12px}' +
-    '.anki-badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;color:#fff;background:#6366f1}' +
-    '.anki-badge.B{background:#0d9488}.anki-badge.C{background:#d97706}' +
-    '.anki-ico{font-size:84px;text-align:center;line-height:1.1;margin:8px 0 2px}' +
-    '.anki-word{font-size:56px;font-weight:800;text-align:center;margin:2px 0 4px;line-height:1.15;color:#1e3a8a;word-break:break-word}' +
-    '.anki-word.en{font-size:46px}' +
-    '.anki-ex{background:#f1f5f9;border-radius:12px;padding:10px 12px;margin:8px 0;font-size:19px;text-align:center}' +
-    '.anki-ex small{display:block;font-size:13px;color:#475569;margin-top:4px}' +
-    '.anki-hl{background:#fde68a;border-radius:4px;padding:0 2px}' +
-    '.anki-blank{display:inline-block;min-width:3.2em;border-bottom:3px solid #2563eb;color:#2563eb;font-weight:800}' +
-    '.anki-meaning{font-size:22px;text-align:center;font-weight:700;margin:6px 0}' +
-    '.anki-def{font-size:15px;text-align:center;color:#334155;margin:4px 0;font-style:italic}' +
-    '.anki-in{display:flex;gap:8px;margin:10px 0}.anki-in input{flex:1;padding:10px;border-radius:10px;border:2px solid #cbd5e1;font-size:18px;min-width:0}' +
-    '.anki-in button,.anki-btn{border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700;background:#2563eb;color:#fff}' +
-    '.anki-opts{display:grid;gap:8px;margin:10px 0}.anki-opts.two{grid-template-columns:1fr 1fr}.anki-opts button{border:2px solid #cbd5e1;background:#fff;border-radius:10px;padding:10px;text-align:left;font-size:16px;cursor:pointer}' +
-    '.anki-opts button.ok{border-color:#16a34a;background:#dcfce7}.anki-opts button.bad{border-color:#dc2626;background:#fee2e2}' +
-    '.anki-read{font-size:24px;text-align:center;color:#1d4ed8;font-weight:700}' +
-    '.anki-hv{font-size:19px;text-align:center;margin:2px 0}.anki-hv b{color:#b45309}' +
-    '.anki-pos{font-size:13px;text-align:center;color:#64748b;margin:2px 0;text-transform:lowercase}' +
-    '.anki-ff{background:#fef3c7;border:2px solid #f59e0b;border-radius:12px;padding:8px 12px;margin:10px 0;font-size:14px}' +
-    '.anki-looked{display:inline-block;background:#d1fae5;color:#065f46;border-radius:99px;padding:2px 10px;font-size:13px;font-weight:800;margin-bottom:4px}' +
-    '.anki-flag{text-align:center;margin:2px 0}.anki-flag button{border:0;background:none;color:#64748b;font-size:14px;text-decoration:underline;min-height:44px;cursor:pointer}' +
-    '.anki-audio{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0}.anki-audio button{border:0;border-radius:8px;padding:6px 10px;background:#e0e7ff;cursor:pointer;font-size:12px}' +
-    '.anki-grades{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}' +
-    '.anki-grades button{border:0;border-radius:10px;padding:10px 4px;font-weight:800;cursor:pointer;color:#fff;font-size:13px;line-height:1.3}' +
-    '.anki-grades button small{display:block;font-weight:500;font-size:11px;opacity:.9}.anki-grades button:disabled{opacity:.35;cursor:not-allowed}' +
-    '.g1{background:#dc2626}.g2{background:#f97316}.g3{background:#16a34a}.g4{background:#2563eb}' +
-    '.anki-msg{min-height:20px;font-size:13px;margin:6px 0;text-align:center}' +
-    '.anki-tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;font-size:12px;align-items:center}.anki-tools button,.anki-tools label.btn{background:#e2e8f0;border:0;border-radius:8px;padding:6px 10px;cursor:pointer}' +
-    '.anki-units h3{margin:14px 0 4px;font-size:14px;color:#1e3a8a}.anki-units h4{margin:8px 0 4px;font-size:12px;color:#475569}' +
-    '.anki-unit{display:flex;justify-content:space-between;gap:8px;align-items:center;border:1px solid #e2e8f0;border-radius:10px;padding:6px 10px;margin:4px 0;font-size:13px}' +
-    '.anki-unit.locked{opacity:.65}.anki-unit button{border:0;border-radius:8px;padding:5px 9px;background:#e0e7ff;cursor:pointer;font-size:12px;white-space:nowrap}' +
-    '.anki-prev li{display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:14px;cursor:pointer;list-style:none}' +
-    '@media(max-width:560px){.anki-word{font-size:40px}.anki-word.en{font-size:34px}.anki-ico{font-size:64px}.anki-card{padding:14px}.anki-opts.two{grid-template-columns:1fr}}';
+  /* ---------- Giao diện Anki 100% (CSS hoàn chỉnh) ---------- */
+  var CSS = [
+    '/* Anki 100% Theme */',
+    '.anki-panel { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); border-radius: 14px; padding: 12px; margin: 10px 0; color: #e2e8f0; font-family: inherit; }',
+    '.anki-panel h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .04em; color: #fde68a; font-weight: 800; display: flex; align-items: center; gap: 6px; }',
+    '.anki-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; }',
+    '.anki-nums div { border-radius: 10px; padding: 6px 2px; font-size: 10px; line-height: 1.25; font-weight: 600; }',
+    '.anki-nums b { display: block; font-size: 20px; font-weight: 800; }',
+    '.anki-n { background: #1d4ed8; color: #fff; }',
+    '.anki-d { background: #dc2626; color: #fff; }',
+    '.anki-k { background: #15803d; color: #fff; }',
+    '.anki-go { width: 100%; margin-top: 8px; padding: 10px; border: 0; border-radius: 10px; background: #f59e0b; color: #1e293b; font-weight: 800; cursor: pointer; font-size: 13px; box-shadow: 0 2px 6px rgba(245,158,11,.3); }',
+    '.anki-go:disabled { opacity: .5; cursor: default; }',
+    '.anki-row { display: flex; gap: 6px; margin-top: 6px; }',
+    '.anki-row button { flex: 1; padding: 7px 4px; border: 0; border-radius: 8px; background: rgba(255,255,255,.14); color: #e2e8f0; cursor: pointer; font-size: 11px; font-weight: 600; }',
+    '.anki-small { margin-top: 6px; font-size: 10px; color: #94a3b8; line-height: 1.35; }',
 
-  var panelEl = null, modalEl = null, session = null;
+    '/* Anki Desktop Window Modal */',
+    '.anki-back { position: fixed; inset: 0; background: rgba(15,23,42,.78); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 99999; padding: 16px; overflow: auto; }',
+    '.anki-back.open { display: flex; }',
+    '.anki-window { background: #ffffff; color: #0f172a; border-radius: 16px; max-width: 980px; width: 100%; min-height: 560px; box-shadow: 0 25px 80px rgba(0,0,0,.45); display: flex; flex-direction: column; overflow: hidden; position: relative; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }',
+
+    '/* Top Navigation Bar */',
+    '.anki-top-nav { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 20px; display: flex; flex-direction: column; align-items: center; position: relative; }',
+    '.anki-nav-links { display: flex; gap: 28px; font-size: 14px; font-weight: 500; color: #475569; }',
+    '.anki-nav-link { cursor: pointer; padding: 2px 4px; border-radius: 4px; text-decoration: none; color: inherit; }',
+    '.anki-nav-link:hover { color: #0284c7; }',
+    '.anki-nav-link.sync { color: #0284c7; font-weight: 600; }',
+    '.anki-deck-subtitle { margin-top: 4px; font-size: 12px; color: #64748b; font-weight: 500; text-align: center; }',
+    '.anki-close-x { position: absolute; right: 14px; top: 12px; background: none; border: 0; font-size: 20px; color: #94a3b8; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; }',
+    '.anki-close-x:hover { color: #0f172a; background: #e2e8f0; }',
+
+    '/* Card Body (2 Columns like 4000 Essential English Words) */',
+    '.anki-card-body { flex: 1; display: flex; gap: 40px; padding: 36px 44px; align-items: flex-start; justify-content: center; }',
+    '.anki-col-left { flex: 1; max-width: 520px; text-align: left; }',
+    '.anki-col-right { flex: 1; max-width: 360px; display: flex; flex-direction: column; align-items: center; }',
+
+    '/* Left Column Typography */',
+    '.anki-vi-title { color: #1d4ed8; font-size: 22px; font-weight: 600; line-height: 1.35; margin-bottom: 12px; word-break: break-word; }',
+    '.anki-letter-hint { color: #dc2626; font-size: 26px; font-weight: 700; letter-spacing: 0.18em; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; margin-bottom: 16px; min-height: 34px; }',
+    '.anki-target-word-line { margin-bottom: 16px; min-height: 34px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }',
+    '.anki-target-word { font-size: 28px; font-weight: 800; color: #0f172a; }',
+    '.anki-target-ipa { font-size: 18px; color: #64748b; font-weight: 500; }',
+    '.anki-target-pos { font-size: 13px; color: #94a3b8; font-style: italic; background: #f1f5f9; padding: 2px 8px; border-radius: 99px; }',
+
+    '.anki-def-line { font-size: 16px; color: #1e293b; line-height: 1.55; margin-bottom: 12px; }',
+    '.anki-ex-line { font-size: 16px; color: #334155; line-height: 1.55; margin-bottom: 4px; }',
+    '.anki-ex-vi { font-size: 14px; color: #64748b; font-style: italic; margin-left: 20px; margin-bottom: 18px; }',
+
+    '.anki-cloze-bracket { color: #1d4ed8; font-weight: 700; padding: 0 2px; }',
+    '.anki-hl { background: #fef08a; color: #0f172a; padding: 1px 4px; border-radius: 4px; font-weight: 800; }',
+
+    '.anki-audio-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }',
+    '.anki-audio-btn { background: #e0e7ff; color: #3730a3; border: 0; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: background .15s; }',
+    '.anki-audio-btn:hover { background: #c7d2fe; }',
+
+    '/* Right Column: Input & Illustration */',
+    '.anki-input-box { width: 100%; max-width: 320px; border: 2.5px solid #f59e0b; border-radius: 12px; padding: 10px 14px; font-size: 20px; text-align: center; color: #0f172a; outline: none; margin-bottom: 16px; box-sizing: border-box; background: #fff; box-shadow: 0 2px 8px rgba(245,158,11,.15); transition: border-color .2s; }',
+    '.anki-input-box:focus { border-color: #ea580c; }',
+
+    '.anki-diff-box { width: 100%; max-width: 320px; border-radius: 12px; padding: 10px 14px; font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 16px; box-sizing: border-box; background: #f8fafc; border: 2px solid #cbd5e1; }',
+    '.anki-diff-ok { color: #16a34a; font-weight: 800; }',
+    '.anki-diff-bad { color: #dc2626; text-decoration: line-through; margin: 0 1px; }',
+    '.anki-diff-miss { color: #64748b; opacity: .7; margin: 0 1px; }',
+    '.anki-diff-extra { color: #dc2626; text-decoration: line-through; }',
+
+    '.anki-img-card { width: 100%; max-width: 320px; height: 230px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 96px; box-shadow: 0 2px 10px rgba(0,0,0,.04); overflow: hidden; position: relative; user-select: none; }',
+
+    '/* Bottom Footer Bar */',
+    '.anki-footer-bar { border-top: 1px solid #e2e8f0; padding: 12px 24px; background: #fff; display: flex; align-items: center; justify-content: space-between; }',
+    '.anki-pill-btn { border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 999px; padding: 6px 18px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }',
+    '.anki-pill-btn:hover { background: #f1f5f9; border-color: #94a3b8; }',
+
+    '.anki-center-actions { display: flex; flex-direction: column; align-items: center; gap: 6px; }',
+    '.anki-counter-line { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; letter-spacing: .02em; }',
+    '.c-new { color: #0284c7; }',
+    '.c-learn { color: #dc2626; }',
+    '.c-due { color: #16a34a; }',
+
+    '.anki-btn-show { border: 1px solid #cbd5e1; background: #fff; color: #0f172a; border-radius: 999px; padding: 7px 32px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.06); transition: all .15s; }',
+    '.anki-btn-show:hover { background: #f8fafc; border-color: #94a3b8; box-shadow: 0 2px 6px rgba(0,0,0,.1); }',
+
+    '.anki-grades-grid { display: flex; gap: 10px; }',
+    '.anki-grade-btn { border: 1px solid #e2e8f0; border-radius: 10px; padding: 6px 16px; font-size: 13px; cursor: pointer; text-align: center; color: #fff; font-weight: 700; min-width: 78px; transition: transform .1s, opacity .15s; }',
+    '.anki-grade-btn:hover { transform: translateY(-1px); }',
+    '.anki-grade-btn small { display: block; font-size: 11px; font-weight: 500; opacity: .85; }',
+    '.g-again { background: #dc2626; border-color: #b91c1c; }',
+    '.g-hard { background: #ea580c; border-color: #c2410c; }',
+    '.g-good { background: #16a34a; border-color: #15803d; }',
+    '.g-easy { background: #0284c7; border-color: #0369a1; }',
+
+    '/* Responsive */',
+    '@media(max-width: 720px) {',
+    '  .anki-card-body { flex-direction: column; padding: 20px; gap: 20px; align-items: stretch; }',
+    '  .anki-col-left, .anki-col-right { max-width: 100%; }',
+    '  .anki-img-card { height: 180px; font-size: 72px; }',
+    '  .anki-grades-grid { flex-wrap: wrap; justify-content: center; }',
+    '}'
+  ].join('\n');
 
   function injectCSS() {
     if (document.getElementById('ankiCss')) return;
-    var st = document.createElement('style'); st.id = 'ankiCss'; st.textContent = CSS; document.head.appendChild(st);
+    var st = document.createElement('style');
+    st.id = 'ankiCss';
+    st.textContent = CSS;
+    document.head.appendChild(st);
   }
-  function stageInfo(level) {                          // ưu tiên meta.js (dữ liệu bài nạp theo cấp nên cấp khác có thể chưa nạp)
-    var ms = ((root.COURSE_META || {}).stages || []).filter(function (x) { return x.id === level; })[0];
-    return ms || (root.CURRICULUM_STAGES || {})[level];
-  }
-  function lessonLabel(l) { return l.id + ' · ' + String(l.name || '').replace(/^(Bài|Lesson|Unit)\s+[0-9.A-Za-z]+\s*[:：]\s*/, ''); }
+
+  /* ---------- Sidebar UI ---------- */
+  var panelEl = null, modalEl = null, session = null;
+
   function buildPanel() {
     injectCSS();
     var sb = document.querySelector(CFG.sidebar || '.left-sidebar');
     if (!sb || document.getElementById('ankiPanel')) return;
+
     panelEl = document.createElement('div');
-    panelEl.className = 'anki-panel'; panelEl.id = 'ankiPanel';
-    panelEl.innerHTML = '<h4>🗂️ ANKI TỪ VỰNG LŨY KẾ</h4>' +
-      '<div class="anki-nums"><div class="anki-n"><b id="ankiNew">0</b>🟦 Từ mới</div><div class="anki-d"><b id="ankiDue">0</b>🟥 Đến hạn</div><div class="anki-k"><b id="ankiKnown">0</b>🟩 Đã nhớ</div></div>' +
-      '<div class="anki-types" id="ankiTypes" role="group" aria-label="Loại thẻ">' + ['A', 'B', 'C'].map(function (t) { return '<label><input type="checkbox" data-t="' + t + '"> ' + t + '. ' + TYPE_LABEL[t] + '</label>'; }).join('') + '</div>' +
-      '<label for="ankiCursor">📍 Mở từ vựng đến bài:</label><select id="ankiCursor" aria-label="Mở từ vựng đến bài"></select>' +
-      '<button class="anki-go" id="ankiGo" type="button">🚀 Vào Ôn Anki Hôm Nay</button>' +
-      '<div class="anki-row"><button type="button" id="ankiBrowse">📚 Duyệt theo bài</button><button type="button" id="ankiPreview">📖 Học trước 1 bài</button></div>' +
-      '<div class="anki-small" id="ankiInfo"></div>';
+    panelEl.className = 'anki-panel';
+    panelEl.id = 'ankiPanel';
+    panelEl.innerHTML = [
+      '<h4>🗂️ ANKI TỪ VỰNG LŨY KẾ</h4>',
+      '<div class="anki-nums">',
+      '  <div class="anki-n"><b id="ankiNew">0</b>Từ mới</div>',
+      '  <div class="anki-d"><b id="ankiDue">0</b>Đang học</div>',
+      '  <div class="anki-k"><b id="ankiKnown">0</b>Đến hạn</div>',
+      '</div>',
+      '<button class="anki-go" id="ankiGo" type="button">🚀 Vào Ôn Anki Hôm Nay</button>',
+      '<div class="anki-row">',
+      '  <button type="button" id="ankiBrowse">📚 Duyệt thẻ</button>',
+      '  <button type="button" id="ankiSync">🔄 Đồng bộ</button>',
+      '</div>',
+      '<div class="anki-small" id="ankiInfo"></div>'
+    ].join('');
+
     var anchor = sb.querySelector(CFG.anchor || '.speed-row');
-    if (anchor) sb.insertBefore(panelEl, anchor); else sb.appendChild(panelEl);
-    var sel = panelEl.querySelector('#ankiCursor');
-    sel.addEventListener('change', function () { CS.setSetting('anki.cursor', sel.value); refreshPanel(); });
+    if (anchor) sb.insertBefore(panelEl, anchor);
+    else sb.appendChild(panelEl);
+
     panelEl.querySelector('#ankiGo').addEventListener('click', openSession);
     panelEl.querySelector('#ankiBrowse').addEventListener('click', openBrowse);
-    panelEl.querySelector('#ankiPreview').addEventListener('click', function () { var nx = nextLessonId(); if (nx) openPreview(nx); });
-    panelEl.querySelectorAll('#ankiTypes input').forEach(function (cb) {
-      cb.addEventListener('change', function () {
-        var sel2 = []; panelEl.querySelectorAll('#ankiTypes input').forEach(function (x) { if (x.checked) sel2.push(x.getAttribute('data-t')); });
-        if (!sel2.length) { cb.checked = true; return; }               // luôn còn ít nhất một loại thẻ
-        types = sel2; CS.setSetting('anki.types', types); refreshPanel();
-      });
+    panelEl.querySelector('#ankiSync').addEventListener('click', function () {
+      save();
+      refreshPanel();
+      alert('Đã đồng bộ thẻ Anki với hệ thống!');
     });
+
     refreshPanel();
   }
-  function nextLessonId() {
-    var i = cursorIndex() + 1, ls = RAW.lessons || [];
-    return ls[i] ? ls[i].id : null;
-  }
+
   function refreshPanel() {
     if (!panelEl) return;
-    var c = counts(), sel = panelEl.querySelector('#ankiCursor');
+    var c = counts();
+    var curLesson = currentActiveLessonId();
+    var lObj = lessonOf(curLesson);
+
     panelEl.querySelector('#ankiNew').textContent = c.new;
-    panelEl.querySelector('#ankiDue').textContent = c.due;
-    panelEl.querySelector('#ankiKnown').textContent = c.known;
-    panelEl.querySelectorAll('#ankiTypes input').forEach(function (cb) { cb.checked = types.indexOf(cb.getAttribute('data-t')) >= 0; });
-    var cur = CS.setting('anki.cursor', 'auto');
-    if (sel.options.length !== (RAW.lessons || []).length + 1) {
-      sel.innerHTML = '<option value="auto">Tự động: bài cao nhất đã mở</option>' + (RAW.lessons || []).map(function (l) { return '<option value="' + esc(l.id) + '">' + esc(lessonLabel(l)) + '</option>'; }).join('');
-    }
-    sel.value = LESSON_ORDER[cur] !== undefined ? cur : 'auto';
-    var id = cursorId();
-    panelEl.querySelector('#ankiInfo').textContent = 'Tới bài ' + (id || '—') + ': ' + c.words + ' từ, ' + c.total + ' thẻ. Từ mới tối đa ' + limit + '/ngày (còn ' + Math.floor(newAllowance() / types.length) + ' hôm nay).';
-    panelEl.querySelector('#ankiGo').disabled = !WORDS.length;
-    panelEl.querySelector('#ankiPreview').disabled = !nextLessonId();
+    panelEl.querySelector('#ankiDue').textContent = c.learning;
+    panelEl.querySelector('#ankiKnown').textContent = c.due;
+
+    panelEl.querySelector('#ankiInfo').textContent =
+      'Bài hiện tại: ' + esc(curLesson) + ' (' + c.new + ' từ mới). Quỹ từ tích lũy tới bài này: ' + c.total + ' từ.';
+    panelEl.querySelector('#ankiGo').disabled = (c.total === 0);
   }
 
-  /* ---------- màn hình ôn ---------- */
+  /* ---------- Modal Ôn Tập Anki 100% ---------- */
   function ensureModal() {
     if (modalEl) return;
     modalEl = document.createElement('div');
-    modalEl.className = 'anki-back'; modalEl.id = 'ankiModal';
-    modalEl.setAttribute('role', 'dialog'); modalEl.setAttribute('aria-modal', 'true'); modalEl.setAttribute('aria-label', 'Ôn từ vựng Anki');
-    modalEl.addEventListener('click', function (e) { if (e.target === modalEl) closeSession(); });
+    modalEl.className = 'anki-back';
+    modalEl.id = 'ankiModal';
+    modalEl.setAttribute('role', 'dialog');
+    modalEl.setAttribute('aria-modal', 'true');
+    modalEl.setAttribute('aria-label', 'Ôn tập Anki');
+    modalEl.addEventListener('click', function (e) {
+      if (e.target === modalEl) closeSession();
+    });
     document.body.appendChild(modalEl);
     document.addEventListener('keydown', onKey);
   }
+
   function openSession() {
     ensureModal();
-    session = { mode: 'review', queue: buildQueue(), pos: 0, face: 'front', forced: false, done: 0, again: 0, stage: 0 };
+    session = {
+      mode: 'review',
+      queue: buildQueue(),
+      pos: 0,
+      face: 'front',
+      typed: '',
+      done: 0,
+      again: 0
+    };
     modalEl.classList.add('open');
     render();
   }
-  function closeSession() { stopSpeech(); if (modalEl) modalEl.classList.remove('open'); session = null; refreshPanel(); }
-  function curKey() { return session && session.queue && session.queue[session.pos]; }
-  function curWord() { var k = curKey(); return k ? WORD_BY_ID[splitKey(k).id] : null; }
-  function curType() { var k = curKey(); return k ? splitKey(k).type : null; }
 
-  function heroHtml(w, withWord) {
-    return (isLooked(w.id) ? '<div class="anki-looked">🔎 Vừa tra trong bài</div>' : '') + '<div class="anki-ico" aria-hidden="true">' + esc(w.ico || '🔤') + '</div>' + (withWord ? '<div class="anki-word ' + (CFG.wordClass || '') + '" lang="' + esc(CFG.wordLang || '') + '">' + esc(w.text) + '</div>' : '');
+  function closeSession() {
+    stopSpeech();
+    if (modalEl) modalEl.classList.remove('open');
+    session = null;
+    refreshPanel();
   }
-  function clozeHtml(w) {
-    if (!w.cloze) return '';
-    return '<div class="anki-ex" lang="' + esc(CFG.wordLang || '') + '">' + esc(w.cloze).replace(/_{2,}/g, '<span class="anki-blank">&nbsp;&nbsp;&nbsp;</span>') + '</div>';
+
+  function curKey() {
+    return session && session.queue && session.queue[session.pos];
   }
-  function optionsFor(w, kind) {
-    var rnd = seeded(rngSeed(w.id + kind));
-    if (kind === 'meaning') {
-      var pool = WORDS.filter(function (x) { return x.id !== w.id && x.vi && x.vi !== w.vi && x.level <= w.level && x.pos === w.pos; });
-      if (pool.length < 3) pool = WORDS.filter(function (x) { return x.id !== w.id && x.vi && x.vi !== w.vi; });
-      return shuffle([w.vi].concat(shuffle(pool, rnd).slice(0, 3).map(function (x) { return x.vi; })), rnd);
-    }
-    return shuffle([w.text].concat((w.dis || []).slice(0, 3)), rnd);
+  function curWord() {
+    var k = curKey();
+    return k ? WORD_BY_ID[splitKey(k).id] : null;
   }
 
   function render() {
-    try { var w0 = session && session.mode === 'preview' ? previewWord() : curWord(); if (w0 && root.AppKit && root.AppKit.preloadLesson) root.AppKit.preloadLesson(w0.lesson); } catch (e) {}      // nạp sprite âm thanh của bài trước khi lật thẻ
     if (!session) return;
-    if (session.mode === 'preview') return renderPreview();
-    var w = curWord(), t = curType(), h = '';
-    var left = session.queue.length - session.pos;
-    h += '<div class="anki-card"><div class="anki-top"><span>Còn <b>' + left + '</b> thẻ · đã ôn ' + session.done + (t ? ' · <span class="anki-badge ' + t + '">' + t + '. ' + TYPE_LABEL[t] + '</span>' : '') + '</span>' +
-      '<span><button type="button" id="ankiRate">' + (rateName === 'slow' ? '🐢 Chậm' : '🐇 Tự nhiên') + '</button> <button type="button" id="ankiClose">✕ Đóng</button></span></div>';
+    if (session.mode === 'browse') return renderBrowse();
+
+    var w = curWord();
+    var c = counts();
+    var curLesson = currentActiveLessonId();
+    var lObj = lessonOf(curLesson);
+    var deckTitle = 'Tiếng Anh Thiếu Nhi · ' + (lObj ? (lObj.name || lObj.id) : ('Bài ' + curLesson));
+
+    var h = '<div class="anki-window">';
+
+    // Top Navigation
+    h += '<div class="anki-top-nav">' +
+      '<div class="anki-nav-links">' +
+      '  <a class="anki-nav-link" id="navDecks">Decks</a>' +
+      '  <a class="anki-nav-link" id="navAdd">Add</a>' +
+      '  <a class="anki-nav-link" id="navBrowse">Browse</a>' +
+      '  <a class="anki-nav-link" id="navStats">Stats</a>' +
+      '  <a class="anki-nav-link sync" id="navSync">Sync</a>' +
+      '</div>' +
+      '<div class="anki-deck-subtitle">' + esc(deckTitle) + '</div>' +
+      '<button class="anki-close-x" id="ankiClose" title="Đóng">✕</button>' +
+      '</div>';
+
     if (!w) {
-      var c = counts();
-      h += '<h2 style="text-align:center;margin:30px 0 6px">🎉 Hết thẻ hôm nay</h2><p style="text-align:center;color:#475569">Đã ôn ' + session.done + ' thẻ (quên ' + session.again + ' lần). Thẻ mới còn: ' + c.new + ' · đến hạn: ' + c.due + ' · đã nhớ: ' + c.known + '.</p>' + toolsHtml() + '</div>';
-      modalEl.innerHTML = h; bindCommon(); return;
+      // Completed Queue
+      h += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;">' +
+        '<div style="font-size:64px;margin-bottom:12px">🎉</div>' +
+        '<h2 style="font-size:24px;font-weight:800;color:#0f172a;margin:0 0 8px">Chúc mừng bạn đã hoàn thành bài ôn hôm nay!</h2>' +
+        '<p style="color:#64748b;max-width:480px;line-height:1.5">Bạn đã ôn xong <b>' + session.done + '</b> lượt thẻ. Quỹ từ tích lũy bài ' + esc(curLesson) + ' hiện có ' + c.total + ' từ.</p>' +
+        '<button type="button" class="anki-pill-btn" id="ankiFinishClose" style="margin-top:20px;padding:8px 24px">Quay lại bài học</button>' +
+        '</div></div>';
+      modalEl.innerHTML = h;
+      bindEvents();
+      return;
     }
-    if (session.face === 'front') h += frontHtml(w, t); else h += backHtml(w);
-    modalEl.innerHTML = h;
-    bindCommon();
-    var inp = modalEl.querySelector('#ankiTyped'); if (inp) inp.focus();
-    if (session.face === 'back') playChain(w);
-    else if (t === 'A') playChain(w, ['word']);
-    else if (t === 'C') playChain(w, ['word', 'ex']);
-  }
-  function frontHtml(w, t) {
-    var h = '';
-    if (t === 'A') {
-      h += heroHtml(w, true) + '<div class="anki-audio"><button type="button" data-play="word">🔊 Nghe từ</button></div>';
-      h += '<div class="anki-opts" id="ankiOpts" data-kind="meaning">' + optionsFor(w, 'meaning').map(function (o, i) { return '<button type="button" data-v="' + esc(o) + '">' + (i + 1) + '. ' + esc(o) + '</button>'; }).join('') + '</div>';
-    } else if (t === 'B') {
-      h += heroHtml(w, false) + '<div class="anki-meaning">' + esc(w.vi) + '</div>' + (w.def ? '<div class="anki-def">' + esc(w.def) + '</div>' : '') + clozeHtml(w);
-      if (session.stage === 1) {
-        h += '<div class="anki-msg">✅ Đúng ' + esc(CFG.typedLabel || 'cách gõ') + '.' + (session.viHint ? ' ⚠️ ' + root.AppKit.TELEX_HINT : '') + ' Chọn đúng chữ:</div><div class="anki-opts two" id="ankiOpts" data-kind="text">' + optionsFor(w, 'text').map(function (o, i) { return '<button type="button" data-v="' + esc(o) + '" lang="' + esc(CFG.wordLang || '') + '">' + (i + 1) + '. ' + esc(o) + '</button>'; }).join('') + '</div>';
-      } else {
-        h += '<div class="anki-in"><input id="ankiTyped" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="' + esc(CFG.typePlaceholder || T('typeHint')) + '" aria-label="Điền từ"><button type="button" id="ankiCheck">Kiểm</button></div>';
+
+    // 2-Column Card Body
+    var defText = getLearnerDef(w);
+    var exText = (w.ex && (w.ex.t || w.ex.en)) || '';
+    var exVi = resolveSentenceVi(w.ex, w);
+
+    h += '<div class="anki-card-body">';
+
+    // Left Column
+    h += '<div class="anki-col-left">';
+    h += '<div class="anki-vi-title">' + esc(w.vi || '') + '</div>';
+
+    if (session.face === 'front') {
+      h += '<div class="anki-letter-hint">' + esc(makeLetterHint(w.text)) + '</div>';
+      h += '<div class="anki-def-line">' + makeCloze(defText, w.text, w.forms) + '</div>';
+      if (exText) {
+        h += '<div class="anki-ex-line">→ ' + makeCloze(exText, w.text, w.forms) + '</div>';
+        if (exVi) h += '<div class="anki-ex-vi">(👉 ' + esc(exVi) + ')</div>';
       }
     } else {
-      h += '<div class="anki-ico" aria-hidden="true">🎧</div><div class="anki-meaning">' + esc(T('hearTitle')) + '</div><div class="anki-audio"><button type="button" data-play="all">🔊 Nghe lại</button></div>';
-      h += '<div class="anki-opts two" id="ankiOpts" data-kind="text">' + optionsFor(w, 'text').map(function (o, i) { return '<button type="button" data-v="' + esc(o) + '" lang="' + esc(CFG.wordLang || '') + '">' + (i + 1) + '. ' + esc(o) + '</button>'; }).join('') + '</div>';
+      // Back face
+      h += '<div class="anki-target-word-line">' +
+        '<span class="anki-target-word">' + esc(w.text) + '</span>' +
+        '<span class="anki-target-ipa">' + esc(w.read || '') + '</span>' +
+        '<span class="anki-target-pos">' + esc(w.pos || '') + '</span>' +
+        '</div>';
+      h += '<div class="anki-def-line">' + fillCloze(defText, w.text, w.forms) + '</div>';
+      if (exText) {
+        h += '<div class="anki-ex-line">→ ' + fillCloze(exText, w.text, w.forms) + '</div>';
+        if (exVi) h += '<div class="anki-ex-vi">(👉 ' + esc(exVi) + ')</div>';
+      }
+      h += '<div class="anki-audio-row">' +
+        '<button type="button" class="anki-audio-btn" data-play="word">🔊 Từ</button>' +
+        '<button type="button" class="anki-audio-btn" data-play="def">🔊 Định nghĩa</button>' +
+        '<button type="button" class="anki-audio-btn" data-play="ex">🔊 Ví dụ</button>' +
+        '<button type="button" class="anki-audio-btn" data-play="all">▶ Cả chuỗi</button>' +
+        '</div>';
     }
-    h += '<div class="anki-msg" id="ankiMsg"></div><div style="text-align:center"><button class="anki-btn" type="button" id="ankiShow">👁️ ' + esc(T('showBack')) + '</button></div></div>';
-    return h;
+    h += '</div>';
+
+    // Right Column
+    h += '<div class="anki-col-right">';
+    if (session.face === 'front') {
+      h += '<input type="text" id="ankiTyped" class="anki-input-box" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="" autofocus />';
+    } else {
+      h += '<div class="anki-diff-box">' + diffWord(session.typed, w.text) + '</div>';
+    }
+    h += '<div class="anki-img-card">' + esc(w.ico || '🔤') + '</div>';
+    h += '</div>'; // end col-right
+
+    h += '</div>'; // end card-body
+
+    // Bottom Footer
+    h += '<div class="anki-footer-bar">' +
+      '<button type="button" class="anki-pill-btn" id="ankiEdit">Edit</button>' +
+      '<div class="anki-center-actions">' +
+      '  <div class="anki-counter-line">' +
+      '    <span class="c-new">' + c.new + '</span> + ' +
+      '    <span class="c-learn">' + c.learning + '</span> + ' +
+      '    <span class="c-due">' + c.due + '</span>' +
+      '  </div>';
+
+    if (session.face === 'front') {
+      h += '<button type="button" class="anki-btn-show" id="ankiShow">Show Answer (Space)</button>';
+    } else {
+      var c0 = cards[curKey()] || newCard();
+      h += '<div class="anki-grades-grid">' +
+        '<button type="button" class="anki-grade-btn g-again" data-g="1">Again<small>&lt; 10m [1]</small></button>' +
+        '<button type="button" class="anki-grade-btn g-hard" data-g="2">Hard<small>' + intervalLabel(c0, 2) + ' [2]</small></button>' +
+        '<button type="button" class="anki-grade-btn g-good" data-g="3">Good<small>' + intervalLabel(c0, 3) + ' [3]</small></button>' +
+        '<button type="button" class="anki-grade-btn g-easy" data-g="4">Easy<small>' + intervalLabel(c0, 4) + ' [4]</small></button>' +
+        '</div>';
+    }
+    h += '</div>' +
+      '<button type="button" class="anki-pill-btn" id="ankiMore">More ▾</button>' +
+      '</div>';
+
+    h += '</div>'; // end anki-window
+    modalEl.innerHTML = h;
+
+    bindEvents();
+
+    if (session.face === 'front') {
+      var inp = modalEl.querySelector('#ankiTyped');
+      if (inp) {
+        inp.value = session.typed || '';
+        inp.focus();
+      }
+    } else {
+      playChain(w);
+    }
   }
-  function backHtml(w, preview) {
-    var h = heroHtml(w, true);
-    h += '<div class="anki-read">' + esc(w.read || '') + '</div>';
-    if (w.hv) h += '<div class="anki-hv">Hán Việt: <b>' + esc(String(w.hv).replace(/_/g, '·')) + '</b></div>';
-    if (w.pos) h += '<div class="anki-pos">' + esc(w.pos) + '</div>';
-    h += '<div class="anki-meaning">' + esc(w.vi) + '</div>';
-    if (w.def) h += '<div class="anki-def" lang="' + esc(CFG.defLang || '') + '">' + esc(w.def) + '</div>';
-    if (w.ex && w.ex.t) h += '<div class="anki-ex" lang="' + esc(CFG.wordLang || '') + '">' + markInSentence(w.ex.t, w) + (w.ex.read ? '<small>' + esc(w.ex.read) + '</small>' : '') + (w.ex.vi ? '<small>' + esc(w.ex.vi) + '</small>' : '') + '</div>';
-    var ff = (root.ZH_FALSE_FRIENDS || {})[w.text];
-    if (CFG.falseFriends !== false && ff) h += '<div class="anki-ff">⚠️ <b>Bẫy Hán Việt:</b> nghe như «' + esc(ff.hvGuess) + '» (' + esc(ff.trap) + ') nhưng nghĩa là «' + esc(ff.trueVi) + '». ' + esc(ff.note || '') + '</div>';
-    h += '<div class="anki-audio"><button type="button" data-play="word">🔊 Từ</button>' + (w.def ? '<button type="button" data-play="def">🔊 Định nghĩa</button>' : '') + (w.ex && w.ex.t ? '<button type="button" data-play="ex">🔊 Câu ví dụ</button>' : '') + '<button type="button" data-play="all">▶ Cả chuỗi</button></div>';
-    if (root.AppKit && root.AppKit.report) h += '<div class="anki-flag"><button type="button" data-report="1" title="Báo lỗi thẻ này">⚑ Báo lỗi thẻ này</button></div>';
-    if (preview) return h;
-    var c0 = cards[curKey()] || newCard(), f = session.forced;
-    h += '<div class="anki-msg" id="ankiMsg">' + (f ? '❌ Kiểm chứng chưa đúng: chỉ được chọn 1 hoặc 2.' : '') + (session.viHint ? ' ⚠️ ' + root.AppKit.TELEX_HINT : '') + '</div>';
-    h += '<div class="anki-grades">' + [1, 2, 3, 4].map(function (g) {
-      var names = { 1: 'Quên', 2: 'Khó', 3: 'Tốt', 4: 'Dễ' };
-      return '<button type="button" class="g' + g + '" data-g="' + g + '"' + (f && g > 2 ? ' disabled' : '') + '>[' + g + '] ' + names[g] + '<small>' + intervalLabel(c0, g) + '</small></button>';
-    }).join('') + '</div></div>';
-    return h;
-  }
-  function toolsHtml() {
-    return '<div class="anki-tools"><button type="button" id="ankiExport">⬇️ Xuất JSON tiến độ</button><label class="btn">⬆️ Nhập JSON<input type="file" id="ankiImport" accept="application/json,.json" style="display:none"></label>' +
-      '<label>Từ mới tối đa/ngày <input type="number" id="ankiLimit" min="0" max="500" value="' + limit + '" style="width:64px"></label></div><div class="anki-msg" id="ankiIOMsg"></div>';
-  }
-  function bindCommon() {
-    var $ = function (s) { return modalEl.querySelector(s); }, b;
+
+  function bindEvents() {
+    var $ = function (s) { return modalEl.querySelector(s); };
+    var b;
+
     if ((b = $('#ankiClose'))) b.onclick = closeSession;
-    if ((b = $('#ankiRate'))) b.onclick = function () { rateName = rateName === 'slow' ? 'normal' : 'slow'; CS.setSetting('anki.rate', rateName); b.textContent = rateName === 'slow' ? '🐢 Chậm' : '🐇 Tự nhiên'; };
-    if ((b = $('#ankiShow'))) b.onclick = function () { reveal(null); };
-    if ((b = $('#ankiCheck'))) b.onclick = checkTyped;
-    if ((b = $('#ankiTyped'))) b.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); checkTyped(); } };
-    modalEl.querySelectorAll('#ankiOpts button').forEach(function (btn) { btn.onclick = function () { choose(btn); }; });
-    modalEl.querySelectorAll('.anki-grades button').forEach(function (btn) { btn.onclick = function () { grade(parseInt(btn.getAttribute('data-g'), 10)); }; });
-    modalEl.querySelectorAll('[data-report]').forEach(function (btn) {
+    if ((b = $('#ankiFinishClose'))) b.onclick = closeSession;
+    if ((b = $('#navDecks'))) b.onclick = closeSession;
+    if ((b = $('#navBrowse'))) b.onclick = openBrowse;
+    if ((b = $('#navStats'))) b.onclick = openStats;
+    if ((b = $('#navSync'))) b.onclick = function () {
+      save();
+      refreshPanel();
+      alert('✓ Đã đồng bộ tiến độ Anki!');
+    };
+
+    if ((b = $('#ankiShow'))) b.onclick = revealAnswer;
+
+    var inp = $('#ankiTyped');
+    if (inp) {
+      inp.onkeydown = function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          session.typed = inp.value;
+          revealAnswer();
+        }
+      };
+      inp.oninput = function () {
+        session.typed = inp.value;
+      };
+    }
+
+    modalEl.querySelectorAll('.anki-grade-btn').forEach(function (btn) {
       btn.onclick = function () {
-        var w = session && session.mode === 'preview' ? previewWord() : curWord(); if (!w || !root.AppKit) return;
-        root.AppKit.report({ item: 'thẻ ' + (session && session.mode === 'review' && curKey() ? curKey() : w.id), lesson: w.lesson, text: w.text + (w.read ? ' [' + w.read + ']' : '') + ' = ' + w.vi + (w.ex && w.ex.t ? ' | ' + w.ex.t : '') });
+        var g = parseInt(btn.getAttribute('data-g'), 10);
+        grade(g);
       };
     });
+
     modalEl.querySelectorAll('[data-play]').forEach(function (btn) {
-      btn.onclick = function () { var w = session && session.mode === 'preview' ? previewWord() : curWord(); if (!w) return; var p = btn.getAttribute('data-play'); playChain(w, p === 'all' ? ['word', 'def', 'ex'] : [p]); };
+      btn.onclick = function () {
+        var w = curWord();
+        if (!w) return;
+        var p = btn.getAttribute('data-play');
+        playChain(w, p === 'all' ? ['word', 'def', 'ex'] : [p]);
+      };
     });
-    if ((b = $('#ankiExport'))) b.onclick = exportJSON;
-    if ((b = $('#ankiImport'))) b.onchange = function () { importFile(this.files && this.files[0]); this.value = ''; };
-    if ((b = $('#ankiLimit'))) b.onchange = function () { var v = parseInt(this.value, 10); if (v >= 0 && v <= 500) { limit = v; CS.setSetting('anki.limit', v); refreshPanel(); } };
-  }
-  function reveal(ok) {
-    if (!session || session.face === 'back' || !curWord()) return;
-    session.forced = ok === false; session.face = 'back'; render();
-  }
-  function checkTyped() {
-    var w = curWord(), inp = modalEl.querySelector('#ankiTyped');
-    if (!w || !inp || !inp.value.trim()) return;
-    var same = function (t) { return CFG.checkMode === 'pinyin' ? plainPy(t).replace(/v/g, 'u') === plainPy(w.read).replace(/v/g, 'u') : norm(t) === norm(w.text); };   // pinyin: gõ u hoặc v cho ü đều nhận
-    var ok = same(inp.value), viHint = false;
-    if (!ok && root.AppKit && root.AppKit.telexCandidates) {        // bộ gõ tiếng Việt đang bật: chấm theo các dạng Telex ngược, vẫn đúng nhưng nhắc tắt bộ gõ
-      root.AppKit.telexCandidates(inp.value).forEach(function (c) { if (!ok && same(c)) { ok = true; viHint = true; } });
+
+    if ((b = $('#ankiEdit'))) {
+      b.onclick = function () {
+        var w = curWord();
+        if (w) alert('Từ: ' + w.text + '\nNghĩa: ' + w.vi + '\nBài: ' + w.lesson);
+      };
     }
-    if (curType() === 'B' && CFG.imeStep && ok) { session.stage = 1; session.viHint = viHint; render(); return; }       // tiếng Trung: gõ pinyin đúng → chọn chữ Hán (IME 2 bước)
-    session.viHint = viHint;
-    var msg = modalEl.querySelector('#ankiMsg'); if (msg) msg.textContent = (ok ? '✅ Đúng.' : '❌ Chưa đúng.') + (viHint ? ' ⚠️ ' + root.AppKit.TELEX_HINT : '');
-    reveal(ok);
+    if ((b = $('#ankiMore'))) {
+      b.onclick = function () {
+        var w = curWord();
+        if (w) playChain(w);
+      };
+    }
   }
-  function choose(btn) {
-    var w = curWord(); if (!w) return;
-    var kind = btn.parentNode.getAttribute('data-kind');
-    var ok = btn.getAttribute('data-v') === (kind === 'meaning' ? w.vi : w.text);
-    btn.classList.add(ok ? 'ok' : 'bad');
-    modalEl.querySelectorAll('#ankiOpts button').forEach(function (x) { x.disabled = true; if (x.getAttribute('data-v') === (kind === 'meaning' ? w.vi : w.text)) x.classList.add('ok'); });
-    setTimeout(function () { if (session && curWord() === w) reveal(ok); }, ok ? 350 : 700);
+
+  function revealAnswer() {
+    if (!session || session.face === 'back' || !curWord()) return;
+    var inp = modalEl.querySelector('#ankiTyped');
+    if (inp) session.typed = inp.value;
+    session.face = 'back';
+    render();
   }
+
   function grade(g) {
     var w = curWord(), k = curKey();
     if (!w || !session || session.face !== 'back') return;
-    if (session.forced && g > 2) return;
+
     var wasNew = !cards[k] || cards[k].status === 'new';
     cards[k] = sm2(cards[k] || newCard(), g, Date.now());
     save();
-    cards[k].type = splitKey(k).type; CS.addLog({ item: k, ok: g >= 3, ms: null, kind: 'anki' });          // nhật ký lượt làm của lõi (chỉ ghi thêm)
+
+    cards[k].type = splitKey(k).type;
+    CS.addLog({ item: k, ok: g >= 3, ms: null, kind: 'anki' });
+
     if (wasNew) addIntroduced(1);
     session.done += 1;
-    if (g === 1) { session.again += 1; session.queue.splice(Math.min(session.queue.length, session.pos + 5), 0, k); }
-    session.pos += 1; session.face = 'front'; session.forced = false; session.stage = 0; session.viHint = false;
-    refreshPanel(); render();
+
+    if (g === 1) {
+      // Again: lặp lại thẻ này sau 4 thẻ khác
+      session.again += 1;
+      cards[k].status = 'learning';
+      session.queue.splice(Math.min(session.queue.length, session.pos + 4), 0, k);
+    }
+
+    session.pos += 1;
+    session.face = 'front';
+    session.typed = '';
+    refreshPanel();
+    render();
   }
+
   function onKey(e) {
     if (!session || !modalEl || !modalEl.classList.contains('open')) return;
     var tag = (e.target && e.target.tagName) || '';
-    if (e.key === 'Escape') { closeSession(); return; }
+
+    if (e.key === 'Escape') {
+      closeSession();
+      return;
+    }
+
     if (session.mode === 'browse') return;
-    if (session.mode === 'preview') { if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); previewMove(1); } else if (e.key === 'ArrowLeft') previewMove(-1); return; }
+
     if (session.face === 'front') {
-      if (tag === 'INPUT') {                              // ô gõ trống: Space xem mặt sau; đã gõ chữ thì Space là ký tự bình thường
-        if ((e.key === ' ' || e.code === 'Space') && !e.target.value) { e.preventDefault(); reveal(null); }
+      if (tag === 'INPUT') {
+        if ((e.key === ' ' || e.code === 'Space') && !e.target.value.trim()) {
+          e.preventDefault();
+          revealAnswer();
+        }
         return;
       }
-      if (e.key === ' ' || e.code === 'Space') { e.preventDefault(); reveal(null); return; }
-      if (/^[1-4]$/.test(e.key)) { var bs = modalEl.querySelectorAll('#ankiOpts button'), bt = bs[parseInt(e.key, 10) - 1]; if (bt && !bt.disabled) { e.preventDefault(); choose(bt); } }
-    } else if (/^[1-4]$/.test(e.key) && tag !== 'INPUT') { e.preventDefault(); grade(parseInt(e.key, 10)); }
-    else if (e.key === ' ' || e.code === 'Space') e.preventDefault();
-  }
-
-  /* ---------- duyệt theo bài (unit) và học trước 1 bài ---------- */
-  function lessonStats(id) {
-    var ws = wordsOfLesson(id), now = Date.now(), n = 0, d = 0, k = 0;
-    ws.forEach(function (w) { types.forEach(function (t) { var c = cards[ckey(w.id, t)]; if (!c || c.status === 'new') n++; else { if (c.due <= now) d++; else if (c.status === 'review') k++; } }); });
-    return { words: ws.length, n: n, d: d, k: k };
-  }
-  function openBrowse() {
-    ensureModal(); session = { mode: 'browse' }; modalEl.classList.add('open');
-    var idx = cursorIndex(), h = '<div class="anki-card anki-units"><div class="anki-top"><span><b>📚 Bộ thẻ theo bài</b> (mở khóa lũy kế tới bài ' + esc(cursorId() || '—') + ')</span><span><button type="button" id="ankiClose">✕ Đóng</button></span></div>';
-    var lastLevel = null, lastMod = null;
-    (RAW.lessons || []).forEach(function (l, i) {
-      if (l.level !== lastLevel) {
-        lastLevel = l.level; lastMod = null;
-        var st = stageInfo(l.level);
-        h += '<h3>' + esc(st && st.label ? st.label : (CFG.levelLabel ? CFG.levelLabel(l.level) : 'Cấp ' + l.level)) + '</h3>';
+      if (e.key === ' ' || e.code === 'Space' || e.key === 'Enter') {
+        e.preventDefault();
+        revealAnswer();
       }
-      var m = moduleOf(l.id);
-      if (m !== lastMod) {
-        lastMod = m;
-        var mods = (stageInfo(l.level) || {}).modules || [], mm = mods.filter(function (x) { return x.code === m; })[0];
-        h += '<h4>Module ' + esc(m) + (mm ? ' · ' + esc(mm.title) : '') + '</h4>';
+    } else {
+      // Mặt sau
+      if (/^[1-4]$/.test(e.key)) {
+        e.preventDefault();
+        grade(parseInt(e.key, 10));
+      } else if (e.key === ' ' || e.code === 'Space' || e.key === 'Enter') {
+        e.preventDefault();
+        grade(3); // Mặc định Good
       }
-      var s = lessonStats(l.id), locked = i > idx;
-      h += '<div class="anki-unit' + (locked ? ' locked' : '') + '"><span>' + (locked ? '🔒 ' : '') + esc(lessonLabel(l)) + ' <small>(' + s.words + ' từ · 🟦' + s.n + ' 🟥' + s.d + ' 🟩' + s.k + ')</small></span><button type="button" data-prev="' + esc(l.id) + '">👁️ Xem thẻ</button></div>';
-    });
-    h += '</div>';
-    modalEl.innerHTML = h; bindCommon();
-    modalEl.querySelectorAll('[data-prev]').forEach(function (b) { b.onclick = function () { openPreview(b.getAttribute('data-prev')); }; });
-  }
-  function openPreview(lessonId) {
-    ensureModal();
-    var ws = wordsOfLesson(lessonId);
-    if (!ws.length) return;
-    session = { mode: 'preview', lesson: lessonId, list: ws, pos: 0 };
-    modalEl.classList.add('open');
-    render();
-  }
-  function previewWord() { return session && session.list ? session.list[session.pos] : null; }
-  function previewMove(d) { if (!session || session.mode !== 'preview') return; var n = session.pos + d; if (n >= 0 && n < session.list.length) { session.pos = n; render(); } }
-  function renderPreview() {
-    var w = previewWord(), l = lessonOf(session.lesson);
-    var h = '<div class="anki-card"><div class="anki-top"><span><b>📖 Học trước: ' + esc(lessonLabel(l)) + '</b> · ' + (session.pos + 1) + '/' + session.list.length + ' <small>(xem trước, không tính lịch ôn)</small></span><span><button type="button" id="ankiClose">✕ Đóng</button></span></div>';
-    h += backHtml(w, true);
-    h += '<div class="anki-grades" style="grid-template-columns:1fr 1fr"><button type="button" class="g2" id="ankiPrevBtn"' + (session.pos === 0 ? ' disabled' : '') + '>← Trước</button><button type="button" class="g3" id="ankiNextBtn"' + (session.pos === session.list.length - 1 ? ' disabled' : '') + '>Tiếp →</button></div>';
-    h += '<ul class="anki-prev" style="padding:0;margin:12px 0 0">' + session.list.map(function (x, i) { return '<li data-i="' + i + '"' + (i === session.pos ? ' style="font-weight:800"' : '') + '><span>' + esc(x.ico || '') + '</span><span>' + esc(x.text) + '</span><span style="color:#64748b">' + esc(x.vi) + '</span></li>'; }).join('') + '</ul></div>';
-    modalEl.innerHTML = h; bindCommon();
-    modalEl.querySelector('#ankiPrevBtn').onclick = function () { previewMove(-1); };
-    modalEl.querySelector('#ankiNextBtn').onclick = function () { previewMove(1); };
-    modalEl.querySelectorAll('.anki-prev li').forEach(function (li) { li.onclick = function () { session.pos = parseInt(li.getAttribute('data-i'), 10); render(); }; });
-    playChain(w);
-  }
-  /* ---------- xuất / nhập JSON ---------- */
-  function validCard(c) {
-    return c && typeof c === 'object' && ['new', 'learning', 'review'].indexOf(c.status) >= 0 && isFinite(c.interval) && c.interval >= 0 && isFinite(c.ease) && c.ease >= 1.3 && c.ease <= 5 &&
-      isFinite(c.due) && c.due >= 0 && Number.isInteger(c.reps) && c.reps >= 0 && Number.isInteger(c.lapses) && c.lapses >= 0;
-  }
-  function parseImport(text) {
-    var d;
-    try { d = JSON.parse(text); } catch (e) { return { error: 'Không phải JSON hợp lệ.' }; }
-    if (!d || d.app !== APP || d.version !== 1 || !d.cards || typeof d.cards !== 'object' || Array.isArray(d.cards)) return { error: 'Sai định dạng (cần app "' + APP + '", version 1, có "cards").' };
-    var ks = Object.keys(d.cards);
-    for (var i = 0; i < ks.length; i++) {
-      var sk = splitKey(ks[i]);
-      if (!WORD_BY_ID[sk.id] || ['A', 'B', 'C'].indexOf(sk.type) < 0) return { error: 'Mã thẻ lạ: ' + ks[i] + '. Không nhập.' };
-      if (!validCard(d.cards[ks[i]])) return { error: 'Thẻ ' + ks[i] + ' có số liệu không hợp lệ. Không nhập.' };
     }
-    if (d.opened !== undefined && !Array.isArray(d.opened)) return { error: 'Trường "opened" không hợp lệ.' };
-    return { data: d };
   }
+
+  /* ---------- Trình duyệt thẻ (Browse) ---------- */
+  function openBrowse() {
+    ensureModal();
+    session = { mode: 'browse' };
+    modalEl.classList.add('open');
+    renderBrowse();
+  }
+
+  function renderBrowse() {
+    var curLesson = currentActiveLessonId();
+    var idx = cursorIndex();
+    var ws = wordsUpTo(idx);
+
+    var h = '<div class="anki-window">' +
+      '<div class="anki-top-nav">' +
+      '  <div class="anki-nav-links">' +
+      '    <a class="anki-nav-link" id="navBackReview">← Quay lại Ôn</a>' +
+      '    <a class="anki-nav-link" style="color:#0f172a;font-weight:700">Duyệt Thẻ Lũy Kế</a>' +
+      '  </div>' +
+      '  <button class="anki-close-x" id="ankiClose">✕</button>' +
+      '</div>' +
+      '<div style="flex:1;overflow:auto;padding:20px 24px;">' +
+      '  <h3 style="margin:0 0 12px;font-size:16px;color:#0f172a">Quỹ từ tích lũy tới bài ' + esc(curLesson) + ' (' + ws.length + ' từ)</h3>' +
+      '  <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;">' +
+      '    <thead><tr style="border-bottom:2px solid #e2e8f0;color:#64748b">' +
+      '      <th style="padding:8px">Bài</th><th style="padding:8px">Từ vựng</th><th style="padding:8px">Phiên âm</th><th style="padding:8px">Nghĩa tiếng Việt</th><th style="padding:8px">Trạng thái SM-2</th>' +
+      '    </tr></thead><tbody>';
+
+    ws.forEach(function (w) {
+      var k = ckey(w.id, 'B');
+      var c = cards[k];
+      var st = !c || c.status === 'new' ? '<span style="color:#0284c7;font-weight:600">Mới</span>' :
+               (c.status === 'learning' ? '<span style="color:#dc2626;font-weight:600">Đang học</span>' :
+               '<span style="color:#16a34a;font-weight:600">Đã nhớ (' + (c.interval || 0) + 'd)</span>');
+      h += '<tr style="border-bottom:1px solid #f1f5f9">' +
+        '<td style="padding:8px;color:#64748b">' + esc(w.lesson) + '</td>' +
+        '<td style="padding:8px;font-weight:700;color:#0f172a">' + esc(w.text) + ' ' + (w.ico || '') + '</td>' +
+        '<td style="padding:8px;color:#64748b">' + esc(w.read || '') + '</td>' +
+        '<td style="padding:8px;color:#1e293b">' + esc(w.vi || '') + '</td>' +
+        '<td style="padding:8px">' + st + '</td>' +
+        '</tr>';
+    });
+
+    h += '</tbody></table></div></div>';
+    modalEl.innerHTML = h;
+
+    modalEl.querySelector('#ankiClose').onclick = closeSession;
+    modalEl.querySelector('#navBackReview').onclick = openSession;
+  }
+
+  function openStats() {
+    var c = counts();
+    alert('Thống kê Anki:\n- Bài hiện tại: ' + c.lessonId + '\n- Quỹ từ lũy kế: ' + c.total + ' từ\n- Từ mới: ' + c.new + '\n- Đang học: ' + c.learning + '\n- Đến hạn hôm nay: ' + c.due + '\n- Đã nhớ lâu dài: ' + c.known);
+  }
+
+  /* ---------- Xuất / Nhập JSON ---------- */
   function exportJSON() {
-    var d = { app: APP, version: 1, exportedAt: new Date().toISOString(), cards: cards, opened: opened, cursor: CS.setting('anki.cursor', 'auto'), limit: limit, types: types };
+    var d = { app: APP, version: 2, exportedAt: new Date().toISOString(), cards: cards, opened: opened };
     var blob = new Blob([JSON.stringify(d, null, 1)], { type: 'application/json' });
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (CFG.exportName || 'anki') + '-' + today() + '.json';
-    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
-    var m = modalEl && modalEl.querySelector('#ankiIOMsg'); if (m) m.textContent = '✅ Đã tạo file JSON (' + Object.keys(cards).length + ' thẻ).';
-  }
-  function importText(text) {
-    var r = parseImport(text), m = modalEl && modalEl.querySelector('#ankiIOMsg');
-    if (r.error) { if (m) m.textContent = '❌ ' + r.error; return r; }
-    var d = r.data, take = 0, keep = 0;
-    Object.keys(d.cards).forEach(function (k) {       // gộp: thẻ nhập thắng nếu đã ôn nhiều hơn (reps + lapses), không xóa thẻ hiện có
-      var loc = cards[k], inc = d.cards[k];
-      if (!loc || inc.reps + inc.lapses > loc.reps + loc.lapses) { cards[k] = inc; take++; } else keep++;
-    });
-    (d.opened || []).forEach(function (x) { if (LESSON_ORDER[x] !== undefined && opened.indexOf(x) < 0) opened.push(x); });
-    save(); CS.setAnkiOpened(opened); refreshPanel();
-    if (m) m.textContent = '✅ Đã nhập: lấy ' + take + ' thẻ, giữ ' + keep + ' thẻ hiện có.';
-    return { ok: true, take: take, keep: keep };
-  }
-  function importFile(f) {
-    if (!f) return;
-    var rd = new FileReader();
-    rd.onload = function () { importText(String(rd.result)); };
-    rd.onerror = function () { var m = modalEl.querySelector('#ankiIOMsg'); if (m) m.textContent = '❌ Không đọc được file.'; };
-    rd.readAsText(f);
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (CFG.exportName || 'anki') + '-' + today() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
 
-  /* ---------- thống kê trên máy (không gửi đi đâu) ---------- */
-  function stats(now) {
-    now = now === undefined ? Date.now() : now;
-    var known = 0, mastered = 0, learned = 0;
-    Object.keys(cards).forEach(function (k) {
-      var c = cards[k]; if (!c || c.status === 'new') return;
-      learned++; if (c.status === 'review') { known++; if (c.interval >= 21) mastered++; }
-    });
-    var from = now - 7 * DAY, tot = 0, okn = 0, days = {};
-    CS.logs().forEach(function (r) { if (r.t >= from) { tot++; okn += r.ok ? 1 : 0; } var d = new Date(r.t); days[d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2)] = 1; });
-    return { learned: learned, known: known, mastered: mastered, reviews7: tot, retention7: tot ? Math.round(100 * okn / tot) : null, reviewDays: Object.keys(days).sort() };
-  }
-
-  /* một câu hỏi trắc nghiệm tự chứa cho thẻ (dùng ở chặng "Học hôm nay"): A chọn nghĩa, B điền từ (chọn từ), C nghe chọn từ */
-  function quiz(key) {
-    var sp = splitKey(key), w = WORD_BY_ID[sp.id]; if (!w) return null;
-    if (sp.type === 'A') return { type: 'A', word: w, options: optionsFor(w, 'meaning'), answer: w.vi };
-    if (sp.type === 'B') return { type: 'B', word: w, cloze: w.cloze || '', options: optionsFor(w, 'text'), answer: w.text };
-    return { type: 'C', word: w, options: optionsFor(w, 'text'), answer: w.text };
-  }
-  function reload() {                                      // kho vừa bị thay (nhập sao lưu / tab khác): đọc lại các tham chiếu
-    cards = CS.cards(); opened = CS.ankiOpened();
-    var l = parseInt(CS.setting('anki.limit', 20), 10); limit = l >= 0 && l <= 500 ? l : 20;
-    var t = CS.setting('anki.types', ['A', 'B']); types = ['A', 'B', 'C'].filter(function (x) { return Array.isArray(t) && t.indexOf(x) >= 0; }); if (!types.length) types = ['A', 'B'];
-    rateName = CS.setting('anki.rate', 'slow') === 'normal' ? 'normal' : 'slow';
+  function reload() {
+    cards = CS.cards();
+    opened = CS.ankiOpened();
     refreshPanel();
   }
-  /* ---------- khởi động ---------- */
-  var api = { quiz: quiz, reload: reload, stats: stats, markLooked: markLooked, isLooked: isLooked, sm2: sm2, newCard: newCard, ckey: ckey, splitKey: splitKey, markOpened: markOpened, counts: counts, buildQueue: buildQueue, plainPy: plainPy, parseImport: parseImport, importText: importText,
-              playChain: playChain, current: function () { return session && session.mode === 'review' && curKey() ? { key: curKey(), id: splitKey(curKey()).id, type: curType(), face: session.face } : null; }, words: function () { return WORDS; }, _state: function () { return { cards: cards, opened: opened, limit: limit, types: types }; },
-              open: function () { buildPanel(); openSession(); }, version: 3 };
+
+  /* ---------- API Public ---------- */
+  var api = {
+    reload: reload,
+    markLooked: markLooked,
+    isLooked: isLooked,
+    sm2: sm2,
+    newCard: newCard,
+    ckey: ckey,
+    splitKey: splitKey,
+    markOpened: markOpened,
+    counts: counts,
+    buildQueue: buildQueue,
+    playChain: playChain,
+    exportJSON: exportJSON,
+    current: function () {
+      return session && session.mode === 'review' && curKey() ? { key: curKey(), id: splitKey(curKey()).id, face: session.face } : null;
+    },
+    words: function () { return WORDS; },
+    open: function () { buildPanel(); openSession(); },
+    refresh: refreshPanel,
+    version: 5
+  };
+
   root.ANKI = api;
-  root[CFG.globalName || 'ZH_ANKI'] = api;
+  root[CFG.globalName || 'KIDS_ANKI'] = api;
+
   if (typeof document !== 'undefined') {
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildPanel); else buildPanel();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildPanel);
+    else buildPanel();
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
