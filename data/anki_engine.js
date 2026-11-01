@@ -363,6 +363,9 @@
       try { ankiCurPlay.cancel(); } catch (e) {}
       ankiCurPlay = null;
     }
+    if (ankiAudio) {
+      try { ankiAudio.pause(); } catch (e) {}
+    }
     try { if (root.AppKit && root.AppKit.stopSprite) root.AppKit.stopSprite(); } catch (e) {}
     try { var s = synth(); if (s && s.cancel) s.cancel(); } catch (e) {}
   }
@@ -607,7 +610,7 @@
     '.anki-grade-btn small { display: block; font-size: 11px; font-weight: 500; opacity: .85; }',
     '.g-again { background: #dc2626; border-color: #b91c1c; }',
     '.g-hard { background: #ea580c; border-color: #c2410c; }',
-    '.g-good { background: #16a34a; border-color: #15803d; }',
+    '.g-good { background: #16a34a; border-color: #15803d; box-shadow: 0 0 0 2px #fff, 0 0 0 4px #16a34a; font-weight: 800; }',
     '.g-easy { background: #0284c7; border-color: #0369a1; }',
 
     '/* Responsive */',
@@ -701,6 +704,7 @@
 
   function openSession() {
     ensureModal();
+    stopAnkiAudio();
     session = {
       mode: 'review',
       queue: buildQueue(),
@@ -836,7 +840,7 @@
       h += '<div class="anki-grades-grid">' +
         '<button type="button" class="anki-grade-btn g-again" data-g="1">Again<small>&lt; 10m</small><span class="anki-key-badge">1</span></button>' +
         '<button type="button" class="anki-grade-btn g-hard" data-g="2">Hard<small>' + intervalLabel(c0, 2) + '</small><span class="anki-key-badge">2</span></button>' +
-        '<button type="button" class="anki-grade-btn g-good" data-g="3">Good<small>' + intervalLabel(c0, 3) + '</small><span class="anki-key-badge">3 / Space</span></button>' +
+        '<button type="button" class="anki-grade-btn g-good" data-g="3">Good<small>' + intervalLabel(c0, 3) + '</small><span class="anki-key-badge">3 / Space / Enter</span></button>' +
         '<button type="button" class="anki-grade-btn g-easy" data-g="4">Easy<small>' + intervalLabel(c0, 4) + '</small><span class="anki-key-badge">4</span></button>' +
         '</div>';
     }
@@ -882,6 +886,7 @@
       inp.onkeydown = function (e) {
         if (e.key === 'Enter') {
           e.preventDefault();
+          e.stopPropagation();
           session.typed = inp.value;
           revealAnswer();
         }
@@ -947,6 +952,7 @@
     var inp = modalEl.querySelector('#ankiTyped');
     if (inp) session.typed = inp.value;
     session.face = 'back';
+    session.revealedAt = Date.now();
     render();
   }
 
@@ -998,29 +1004,51 @@
     }
 
     var w = curWord();
+    if (!w) return;
 
-    // R hoặc F5: Phát lại toàn bộ chuỗi âm thanh (Từ + Câu)
-    if (e.key === 'r' || e.key === 'R' || e.key === 'F5') {
-      if (w) {
-        e.preventDefault();
-        playWordAndSentence(w);
+    // --- MẶT TRƯỚC (FRONT FACE) ---
+    if (session.face === 'front') {
+      if (tag === 'INPUT') {
+        // Khi đang gõ trong ô nhập liệu:
+        // TUYỆT ĐỐI KHÔNG can thiệp vào bất kỳ ký tự nào (r, w, s, e, b, số 1..4, v.v.)
+        // Chỉ bắt phím Enter để lật mặt sau (Show Answer)
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          var inp = modalEl.querySelector('#ankiTyped');
+          if (inp) session.typed = inp.value;
+          revealAnswer();
+        }
+        return; // Mọi phím khác để ô input tự nhận, không chạy phím tắt âm thanh
       }
+
+      // Nếu không focus trong ô input: Space hoặc Enter để lật mặt sau
+      if (e.key === ' ' || e.code === 'Space' || e.key === 'Enter') {
+        e.preventDefault();
+        revealAnswer();
+      }
+      return;
+    }
+
+    // --- MẶT SAU (BACK FACE) ---
+    // R hoặc F5: Phát lại toàn bộ chuỗi âm thanh (Từ vựng -> Nghỉ 500ms -> Cả câu)
+    if (e.key === 'r' || e.key === 'R' || e.key === 'F5') {
+      e.preventDefault();
+      playWordAndSentence(w);
       return;
     }
 
     // W: Nghe riêng Từ vựng (Word)
-    if ((e.key === 'w' || e.key === 'W') && tag !== 'INPUT') {
-      if (w) {
-        e.preventDefault();
-        stopAnkiAudio();
-        playAudioItem(w.text);
-      }
+    if (e.key === 'w' || e.key === 'W') {
+      e.preventDefault();
+      stopAnkiAudio();
+      playAudioItem(w.text);
       return;
     }
 
     // S: Nghe riêng Câu ví dụ (Sentence)
-    if ((e.key === 's' || e.key === 'S') && tag !== 'INPUT') {
-      if (w && w.ex && (w.ex.t || w.ex.en)) {
+    if (e.key === 's' || e.key === 'S') {
+      if (w.ex && (w.ex.t || w.ex.en)) {
         e.preventDefault();
         stopAnkiAudio();
         playAudioItem(w.ex.t || w.ex.en);
@@ -1029,50 +1057,36 @@
     }
 
     // E: Edit / xem thông tin thẻ
-    if ((e.key === 'e' || e.key === 'E') && tag !== 'INPUT') {
-      if (w) {
-        e.preventDefault();
-        alert('Thẻ: ' + w.text + '\nNghĩa: ' + w.vi + '\nBài: ' + w.lesson);
-      }
+    if (e.key === 'e' || e.key === 'E') {
+      e.preventDefault();
+      alert('Thẻ: ' + w.text + '\nNghĩa: ' + w.vi + '\nBài: ' + w.lesson);
       return;
     }
 
     // B: Mở duyệt thẻ
-    if ((e.key === 'b' || e.key === 'B') && tag !== 'INPUT') {
+    if (e.key === 'b' || e.key === 'B') {
       e.preventDefault();
       openBrowse();
       return;
     }
 
-    if (session.face === 'front') {
-      if (tag === 'INPUT') {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          var inp = modalEl.querySelector('#ankiTyped');
-          if (inp) session.typed = inp.value;
-          revealAnswer();
-          return;
-        }
-        if ((e.key === ' ' || e.code === 'Space') && !e.target.value.trim()) {
-          e.preventDefault();
-          revealAnswer();
-          return;
-        }
+    // Mặt sau: 1 Again, 2 Hard, 3 Good, 4 Easy
+    if (/^[1-4]$/.test(e.key)) {
+      e.preventDefault();
+      grade(parseInt(e.key, 10));
+      return;
+    }
+
+    // Space hoặc Enter ở mặt sau: Mặc định chọn Good (3) theo chuẩn Anki
+    if (e.key === ' ' || e.code === 'Space' || e.key === 'Enter') {
+      // Chống nảy phím Enter vừa nhấn từ mặt trước trong vòng 200ms
+      if (Date.now() - (session.revealedAt || 0) < 200) {
+        e.preventDefault();
         return;
       }
-      if (e.key === ' ' || e.code === 'Space' || e.key === 'Enter') {
-        e.preventDefault();
-        revealAnswer();
-      }
-    } else {
-      // Mặt sau: 1 Again, 2 Hard, 3 Good, 4 Easy, Space/Enter Good
-      if (/^[1-4]$/.test(e.key)) {
-        e.preventDefault();
-        grade(parseInt(e.key, 10));
-      } else if (e.key === ' ' || e.code === 'Space' || e.key === 'Enter') {
-        e.preventDefault();
-        grade(3); // Mặc định Good
-      }
+      e.preventDefault();
+      grade(3); // Mặc định Good
+      return;
     }
   }
 
